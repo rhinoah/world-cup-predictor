@@ -1,0 +1,20 @@
+# --- datos crudos y artefactos regenerables (se bajan/arman con build_features.py y afines) ---
+data/
+output/
+flags/
+__pycache__/
+*.pyc
+
+# --- datos personales del prode (versionar solo *.example.csv si se crean) ---
+pronosticos.csv
+pronosticos_detalle.json
+predicciones_jornada.txt
+update_log.txt
+prode_error.log
+
+# --- config local de la maquina / Claude Code ---
+.claude/
+prodes.json
+
+# --- working docs internos (citan rutas locales) ---
+TODO.md

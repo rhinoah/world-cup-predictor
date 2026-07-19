@@ -1,0 +1,9 @@
+# modelo y datos
+pandas>=2.0
+numpy>=1.26
+matplotlib>=3.8
+
+# app de escritorio (GUI Windows)
+customtkinter>=5.2
+pystray>=0.19
+pillow>=10.0
