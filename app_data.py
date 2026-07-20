@@ -16,8 +16,18 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import scoring
+
 BASE = Path(__file__).resolve().parent
-HOSTS = {"United States", "Mexico", "Canada"}
+# --- constantes del torneo (fuente unica; el resto de los scripts las importan) ---
+HOSTS = {"United States", "Mexico", "Canada"}   # unicos que juegan de local
+TOURNAMENT = "FIFA World Cup"
+WC_START = "2026-06-11"                         # filtro para aislar el Mundial 2026
+
+
+def wc_matches(res):
+    """Subconjunto del dataset que corresponde al Mundial 2026."""
+    return res[(res["tournament"] == TOURNAMENT) & (res["date"] >= pd.Timestamp(WC_START))]
 # Los prodes en los que se participa: nombre, etiqueta corta para la UI y puntaje
 # (exacto, direccion). Personalizable SIN tocar codigo via prodes.json (no versionado):
 #   {"prodes": [{"name": "Mi prode", "short": "Prode", "exact": 3, "dir": 1}, ...]}
@@ -198,7 +208,7 @@ def _int_or0(v):
 def fixture():
     """Partidos de grupos (dicts) ordenados por hora, con resultado, pred y carga."""
     res, hor, pron = _load()
-    wc = res[(res["tournament"] == "FIFA World Cup") & (res["date"] >= pd.Timestamp("2026-06-11"))]
+    wc = wc_matches(res)
     played = wc.dropna(subset=["home_score", "away_score"])
     res_idx = played.set_index(["home_team", "away_team"])[["home_score", "away_score"]].sort_index()
 
@@ -236,7 +246,7 @@ def knockout_fixture():
     import bracket
     import groups
     res, _, pron = _load()
-    wc = res[(res["tournament"] == "FIFA World Cup") & (res["date"] >= pd.Timestamp("2026-06-11"))]
+    wc = wc_matches(res)
     res_idx = wc.dropna(subset=["home_score", "away_score"]).set_index(
         ["home_team", "away_team"])[["home_score", "away_score"]].sort_index()
 
@@ -326,17 +336,9 @@ def is_knockout(day) -> bool:
     return pd.Timestamp(day) > GROUPS_END
 
 
-def outcome_type(pred, real):
-    """exact / dir / miss segun el acierto (igual para los dos prodes)."""
-    if pred is None or real is None:
-        return None
-    ph, pa = pred
-    rh, ra = real
-    if ph == rh and pa == ra:
-        return "exact"
-    if np.sign(ph - pa) == np.sign(rh - ra):
-        return "dir"
-    return "miss"
+# El acierto (exact/dir/miss) y el puntaje viven en scoring.py, compartidos con
+# liquidar.py y los backtests; aca solo se re-exportan con los nombres de la app.
+outcome_type = scoring.outcome
 
 
 def needs_pens(m):
@@ -349,11 +351,7 @@ def needs_pens(m):
 
 
 def _points(ph, pa, rh, ra, pe, pdir):
-    if ph == rh and pa == ra:
-        return pe
-    if np.sign(ph - pa) == np.sign(rh - ra):
-        return pdir
-    return 0
+    return scoring.points((ph, pa), (rh, ra), pe, pdir)
 
 
 def scoreboard(fx=None, now=None):
@@ -409,7 +407,7 @@ def _match_date(home, away):
     res = pd.read_csv(BASE / "data" / "results.csv")
     res["date"] = pd.to_datetime(res["date"], errors="coerce")
     m = res[(res["home_team"] == home) & (res["away_team"] == away)
-            & (res["tournament"] == "FIFA World Cup") & (res["date"] >= pd.Timestamp("2026-06-11"))]
+            & (res["tournament"] == TOURNAMENT) & (res["date"] >= pd.Timestamp(WC_START))]
     return m.iloc[0]["date"].strftime("%Y-%m-%d") if len(m) else ""
 
 

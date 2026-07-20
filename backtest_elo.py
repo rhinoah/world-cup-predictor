@@ -12,28 +12,11 @@ import numpy as np
 
 from predict_match_v2 import load_results, fit_iterative, score_matrix
 from elo import compute_elo, blended_lambdas, HFA
+from scoring import points as prode_points, best_ev_score as best_ev
 
 TARGET = ["FIFA World Cup", "UEFA Euro", "Copa América"]
 MIN_YEAR = 2016
 WEIGHTS = [0.0, 0.3, 0.5, 0.7, 1.0]
-
-
-def prode_points(pred, real):
-    (ph, pa), (rh, ra) = pred, real
-    if ph == rh and pa == ra:
-        return 3
-    if np.sign(ph - pa) == np.sign(rh - ra):
-        return 1
-    return 0
-
-
-def best_ev(M):
-    k = M.shape[0] - 1
-    I, J = np.meshgrid(np.arange(k + 1), np.arange(k + 1), indexing="ij")
-    ph, pdw, pa = float(M[I > J].sum()), float(M[I == J].sum()), float(M[I < J].sum())
-    pdir = np.where(I > J, ph, np.where(I == J, pdw, pa))
-    bi, bj = np.unravel_index(int(np.argmax(2.0 * M + pdir)), M.shape)
-    return int(bi), int(bj)
 
 
 def main():

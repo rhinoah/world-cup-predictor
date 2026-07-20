@@ -20,6 +20,7 @@ import argparse
 import numpy as np
 import pandas as pd
 
+import scoring
 from predict_match_v2 import load_results, fit_iterative, score_matrix, modal
 from elo import compute_elo, blended_lambdas
 
@@ -34,17 +35,11 @@ def predict(home, away, neutral, p, elo, w=ELO_WEIGHT):
     eh, ea = elo.get(home, 1500.0), elo.get(away, 1500.0)
     lh, la = blended_lambdas(lh_f, la_f, eh, ea, neutral, w)
     M = score_matrix(lh, la)
-    k = M.shape[0] - 1
-    I, J = np.meshgrid(np.arange(k + 1), np.arange(k + 1), indexing="ij")
-    p_home = float(M[I > J].sum())
-    p_draw = float(M[I == J].sum())
-    p_away = float(M[I < J].sum())
-    pdir = np.where(I > J, p_home, np.where(I == J, p_draw, p_away))
-    ev = 2.0 * M + pdir
-    bi, bj = np.unravel_index(int(np.argmax(ev)), ev.shape)
+    ev, p_home, p_draw, p_away = scoring.ev_matrix(M)
+    bi, bj = scoring.best_ev_score(M)
     return dict(lh=lh, la=la, lh_f=lh_f, la_f=la_f, eh=eh, ea=ea, M=M, ev=ev,
                 p_home=p_home, p_draw=p_draw, p_away=p_away,
-                best=(int(bi), int(bj)), best_ev=float(ev[bi, bj]))
+                best=(bi, bj), best_ev=float(ev[bi, bj]))
 
 
 def main():

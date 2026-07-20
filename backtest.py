@@ -20,33 +20,11 @@ from __future__ import annotations
 import numpy as np
 
 from predict_match_v2 import load_results, fit_iterative, score_matrix
+from scoring import points as prode_points, best_ev_score, most_likely_score
 
 # torneos finales (no clasificatorias) a evaluar
 TARGET_TOURNAMENTS = ["FIFA World Cup", "UEFA Euro", "Copa América"]
 MIN_YEAR = 2016
-
-
-def prode_points(pred, real) -> int:
-    (ph, pa), (rh, ra) = pred, real
-    if ph == rh and pa == ra:
-        return 3
-    if np.sign(ph - pa) == np.sign(rh - ra):
-        return 1
-    return 0
-
-
-def best_ev_score(M):
-    k = M.shape[0] - 1
-    I, J = np.meshgrid(np.arange(k + 1), np.arange(k + 1), indexing="ij")
-    ph, pdw, pa = float(M[I > J].sum()), float(M[I == J].sum()), float(M[I < J].sum())
-    pdir = np.where(I > J, ph, np.where(I == J, pdw, pa))
-    bi, bj = np.unravel_index(int(np.argmax(2.0 * M + pdir)), M.shape)
-    return int(bi), int(bj)
-
-
-def most_likely_score(M):
-    bi, bj = np.unravel_index(int(np.argmax(M)), M.shape)
-    return int(bi), int(bj)
 
 
 def lambdas(h, a, neutral, p):

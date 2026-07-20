@@ -21,7 +21,7 @@ from predict_match_v2 import fit_iterative, load_results, apply_manual_overrides
 from elo import compute_elo
 from predict_match_v3 import predict
 
-HOSTS = {"United States", "Mexico", "Canada"}
+from app_data import HOSTS
 RAW = "data/results.csv"
 
 

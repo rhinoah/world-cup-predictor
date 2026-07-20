@@ -29,6 +29,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import scoring
+
 DATA = Path("data/results.csv")
 
 HALF_LIFE_YEARS = 3.0
@@ -162,24 +164,14 @@ def predict(home: str, away: str, neutral: bool, p: dict) -> dict:
     lh = p["mu"] * p["alpha"][th] * p["beta"][ta] * g
     la = p["mu"] * p["alpha"][ta] * p["beta"][th]
     M = score_matrix(lh, la)
-    k = M.shape[0] - 1
-    I, J = np.meshgrid(np.arange(k + 1), np.arange(k + 1), indexing="ij")
-    p_home = float(M[I > J].sum())
-    p_draw = float(M[I == J].sum())
-    p_away = float(M[I < J].sum())
-    pdir = np.where(I > J, p_home, np.where(I == J, p_draw, p_away))
-    ev = 2.0 * M + pdir
-    bi, bj = np.unravel_index(int(np.argmax(ev)), ev.shape)
+    ev, p_home, p_draw, p_away = scoring.ev_matrix(M)
+    bi, bj = scoring.best_ev_score(M)
     return dict(lh=lh, la=la, M=M, p_home=p_home, p_draw=p_draw, p_away=p_away,
-                ev=ev, best=(int(bi), int(bj)), best_ev=float(ev[bi, bj]))
+                ev=ev, best=(bi, bj), best_ev=float(ev[bi, bj]))
 
 
-def modal(M, ev, rel):
-    k = M.shape[0] - 1
-    cells = [(M[i, j], ev[i, j], i, j)
-             for i in range(k + 1) for j in range(k + 1) if rel(i, j)]
-    pm, evm, i, j = max(cells)
-    return i, j, pm, evm
+# re-export por compatibilidad: v3 y los CLI importan `modal` desde aca
+modal = scoring.modal
 
 
 def main() -> None:

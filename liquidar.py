@@ -16,6 +16,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+import app_data
+import scoring
 from predict_match_v2 import apply_manual_overrides
 
 PRON = "pronosticos.csv"
@@ -24,11 +26,7 @@ RESULTS = "data/results.csv"
 
 def prode_points(ph, pa, rh, ra) -> int:
     """Puntaje del prode: 3 marcador exacto, 1 acertar direccion 1X2, 0 si no."""
-    if ph == rh and pa == ra:
-        return 3
-    if np.sign(ph - pa) == np.sign(rh - ra):
-        return 1
-    return 0
+    return scoring.points((ph, pa), (rh, ra))
 
 
 def main():
@@ -41,7 +39,7 @@ def main():
     # Cruzar por EQUIPOS dentro del Mundial 2026, no por fecha exacta: la fecha del pronostico de
     # eliminacion a veces difiere 1 dia de la del dataset (zona horaria) y dejaba partidos jugados
     # sin liquidar. Cada cruce local-visitante es unico dentro del torneo, asi que alcanza.
-    wc = res[(res["tournament"] == "FIFA World Cup") & (res["date"] >= "2026-06-11")]
+    wc = app_data.wc_matches(res)
     res_idx = wc.set_index(["home_team", "away_team"])[["home_score", "away_score"]].sort_index()
 
     newly, fixed = 0, 0

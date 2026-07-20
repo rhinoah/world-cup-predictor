@@ -17,7 +17,7 @@ from predict_match_v2 import load_results, fit_iterative
 from elo import compute_elo
 from predict_match_v3 import predict
 
-HOSTS = {"United States", "Mexico", "Canada"}
+from app_data import HOSTS, TOURNAMENT, WC_START
 
 
 def top_scores(M, n=5):
@@ -32,7 +32,7 @@ def main():
     _, elo = compute_elo(df)
     p = fit_iterative(df, as_of)
 
-    wc = df[(df["tournament"] == "FIFA World Cup") & (df["date"] >= "2026-06-11")]
+    wc = df[(df["tournament"] == TOURNAMENT) & (df["date"] >= WC_START)]
     played = set(zip(wc["home_team"], wc["away_team"]))
 
     hor = pd.read_csv("fixture_horarios.csv")
