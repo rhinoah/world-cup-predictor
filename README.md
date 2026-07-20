@@ -178,8 +178,9 @@ Los CSV de datos y los pronósticos personales **no se versionan** (ver
 
 ## 🧭 Roadmap
 
-- Refactor pendiente (de una auditoría interna post-torneo): unificar la regla de
-  puntaje en un módulo, partir la app en módulos más chicos y sumar una suite de tests.
+- De la auditoría interna post-torneo ya salieron la regla de puntaje unificada
+  (`scoring.py`) y la suite de tests. Queda partir `prode_app.py` en módulos más
+  chicos y armar un padrón único de selecciones (hoy viven en estructuras paralelas).
 - **Visión v2**: generalizar a un framework multi-deporte/multi-competencia —
   fuentes de datos intercambiables (con modo manual-first), formatos de torneo
   configurables (partido único / llaves / liga) y predictor pluggable por deporte.
