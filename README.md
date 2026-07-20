@@ -103,6 +103,25 @@ final ambos favorecían a España pero el mercado con más convicción (**ganó
 España**). Saldo honesto: **1 a 1** — un modelo casero le peleó de igual a igual
 a un mercado real durante un Mundial.
 
+## 🧪 Tests
+
+**577 tests** (pytest) sobre el modelo y la capa de datos:
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Cubren la regla de puntaje y la decisión por EV, el scoreboard por prode, los
+estados de un partido (incluida la ventana extendida de eliminación y el
+override manual), el desempate FIFA de los grupos (con enfrentamiento directo),
+las invariantes del bracket y la tabla oficial de terceros, el Elo (invariante
+de suma cero y ausencia de leakage) y los dtypes de los CSV.
+
+Se validaron con **mutation testing**: al introducir a propósito tres bugs
+(anular los puntos por dirección, acortar la ventana de eliminación y romper el
+desempate head-to-head) la suite los detectó en los tres casos.
+
 ## 🚀 Cómo correrlo
 
 ```bash
@@ -120,6 +139,7 @@ python backtest.py                # backtest del modelo de goles
 python backtest_elo.py            # backtest del blend con Elo
 python liquidar.py                # liquida pronósticos vs resultados reales
 python backfill_ev.py             # análisis real vs esperado (EV)
+pytest                            # suite de tests
 ```
 
 La GUI usa `winsound`/`pystray` y está pensada para **Windows**; el modelo y los
@@ -138,7 +158,9 @@ scripts de análisis corren en cualquier plataforma.
 | `backfill_ev.py` | recalcula el EV as-of de cada pronóstico (real vs esperado) |
 | `app_data.py` | capa de datos de la app (fixture, scoreboard, overrides, penales) |
 | `prode_app.py` | la app de escritorio (CustomTkinter) |
+| `scoring.py` | reglas de puntaje del prode y la decisión por EV (fuente única) |
 | `groups.py` / `bracket.py` | tablas de grupos (desempate FIFA) y llaves M73–M104 |
+| `tests/` | suite pytest (577 tests) |
 | `parse_thirds.py` / `thirds_table.json` | tabla oficial de asignación de terceros (495 combos) |
 | `build_horarios.py` / `build_flags.py` / `make_icon.py` | fixture en hora ARG, banderas, ícono |
 
