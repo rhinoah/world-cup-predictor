@@ -1,5 +1,7 @@
 # ⚽ Prode Mundial 2026 — modelo predictivo + centro de comando
 
+[![tests](https://github.com/rhinoah/world-cup-predictor/actions/workflows/tests.yml/badge.svg)](https://github.com/rhinoah/world-cup-predictor/actions/workflows/tests.yml)
+
 Modelo estadístico que predice marcadores de fútbol de selecciones, y una app de
 escritorio que lo acompaña durante el torneo: pronósticos sugeridos con su "por qué",
 recordatorios, carga de resultados, llaves de eliminación y puntaje en vivo de dos
@@ -105,7 +107,8 @@ a un mercado real durante un Mundial.
 
 ## 🧪 Tests
 
-**577 tests** (pytest) sobre el modelo y la capa de datos:
+**577 tests** (pytest) sobre el modelo y la capa de datos, corriendo en CI para
+Python 3.11 y 3.13:
 
 ```bash
 pip install -r requirements-dev.txt
