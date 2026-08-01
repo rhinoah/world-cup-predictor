@@ -11,7 +11,7 @@ from __future__ import annotations
 import urllib.request
 from pathlib import Path
 
-from app_data import FLAG_ISO
+from teams import FLAG_ISO   # padron unico (no pasa por app_data: evita cargar pandas)
 
 DEST = Path("flags")
 WIDTH = "w40"   # ancho 40px (liviano y nitido a tamano chico)

@@ -14,29 +14,10 @@ Solo cuentan los partidos TERMINADOS (match_state == "done").
 from __future__ import annotations
 
 import app_data
+from teams import GROUPS, team_group  # noqa: F401  (padron unico; se re-exportan)
 
-# 12 grupos (nombres de martj42). Reconstruidos del fixture.
-GROUPS = {
-    "A": ["Mexico", "South Africa", "South Korea", "Czech Republic"],
-    "B": ["Canada", "Bosnia and Herzegovina", "Switzerland", "Qatar"],
-    "C": ["Brazil", "Morocco", "Scotland", "Haiti"],
-    "D": ["United States", "Paraguay", "Turkey", "Australia"],
-    "E": ["Germany", "Ivory Coast", "Ecuador", "Curaçao"],
-    "F": ["Netherlands", "Japan", "Sweden", "Tunisia"],
-    "G": ["Belgium", "Egypt", "Iran", "New Zealand"],
-    "H": ["Spain", "Uruguay", "Saudi Arabia", "Cape Verde"],
-    "I": ["France", "Senegal", "Norway", "Iraq"],
-    "J": ["Argentina", "Algeria", "Austria", "Jordan"],
-    "K": ["Portugal", "Colombia", "Uzbekistan", "DR Congo"],
-    "L": ["England", "Croatia", "Ghana", "Panama"],
-}
-
-
-def team_group(team):
-    for g, teams in GROUPS.items():
-        if team in teams:
-            return g
-    return None
+# GROUPS (12 grupos x 4) y team_group() salen de teams.py, el padron unico de las
+# 48 selecciones; se re-exportan aca porque este es el modulo de la fase de grupos.
 
 
 def standings(fx=None):

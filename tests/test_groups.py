@@ -12,6 +12,7 @@ import pytest
 
 import app_data
 import groups
+import teams
 from conftest import LONG_AGO
 
 FUTURO = datetime(2099, 6, 15, 16, 0)   # nunca "done" contra el reloj real
@@ -37,26 +38,21 @@ def test_groups_tiene_48_equipos_sin_repetir():
 
 
 # --------------------------------------------------------------------------
-# (b) cobertura en app_data.ABBR / app_data.FLAG_ISO (ataja typos)
+# (b) re-exports: groups y app_data siguen exponiendo lo que la app importa
 # --------------------------------------------------------------------------
-@pytest.mark.parametrize("team", sorted(set(ALL_TEAMS)))
-def test_todo_equipo_tiene_abbr_y_bandera(team):
-    """Un typo tipo 'Curacao' vs 'Curaçao' rompe el bracket y la UI."""
-    assert team in app_data.ABBR, f"{team!r} no esta en app_data.ABBR"
-    assert team in app_data.FLAG_ISO, f"{team!r} no esta en app_data.FLAG_ISO"
-
-
-def test_abbr_y_flag_iso_no_tienen_equipos_de_mas():
-    """Las tablas de siglas/banderas cubren exactamente a los 48 clasificados."""
-    teams = set(ALL_TEAMS)
-    assert set(app_data.ABBR) - teams == set()
-    assert set(app_data.FLAG_ISO) - teams == set()
-
-
-def test_las_siglas_son_de_tres_letras_y_unicas():
-    siglas = [app_data.ABBR[t] for t in ALL_TEAMS]
-    assert all(len(s) == 3 for s in siglas)
-    assert len(set(siglas)) == 48, "hay siglas repetidas en ABBR"
+# Antes aca vivian tests que chequeaban que GROUPS, ABBR y FLAG_ISO estuvieran
+# SINCRONIZADOS entre si. Desde que los tres derivan de teams.TEAMS eso no puede
+# fallar por construccion, asi que se fueron: los invariantes del padron (y el
+# typo en un nombre canonico, que es el modo de falla que los reemplaza) se
+# testean contra un testigo externo en tests/test_teams.py.
+def test_groups_y_app_data_reexportan_el_padron():
+    """La app importa groups.GROUPS y app_data.ABBR/FLAG_ISO: si un re-export se
+    cae, prode_app.py explota al arrancar y ningun otro test lo nota."""
+    assert groups.GROUPS is teams.GROUPS
+    assert groups.team_group is teams.team_group
+    assert app_data.ABBR is teams.ABBR
+    assert app_data.FLAG_ISO is teams.FLAG_ISO
+    assert app_data.HOSTS is teams.HOSTS
 
 
 # --------------------------------------------------------------------------

@@ -107,7 +107,7 @@ a un mercado real durante un Mundial.
 
 ## 🧪 Tests
 
-**577 tests** (pytest) sobre el modelo y la capa de datos, corriendo en CI para
+**1187 tests** (pytest) sobre el modelo y la capa de datos, corriendo en CI para
 Python 3.11 y 3.13:
 
 ```bash
@@ -118,12 +118,23 @@ pytest
 Cubren la regla de puntaje y la decisión por EV, el scoreboard por prode, los
 estados de un partido (incluida la ventana extendida de eliminación y el
 override manual), el desempate FIFA de los grupos (con enfrentamiento directo),
-las invariantes del bracket y la tabla oficial de terceros, el Elo (invariante
-de suma cero y ausencia de leakage) y los dtypes de los CSV.
+las invariantes del bracket y la tabla oficial de terceros, el padrón de
+selecciones, el Elo (invariante de suma cero y ausencia de leakage) y los
+dtypes de los CSV.
 
-Se validaron con **mutation testing**: al introducir a propósito tres bugs
-(anular los puntos por dirección, acortar la ventana de eliminación y romper el
-desempate head-to-head) la suite los detectó en los tres casos.
+Se validaron con **mutation testing**: se inyectaron bugs a propósito (anular
+los puntos por dirección, acortar la ventana de eliminación, romper el desempate
+head-to-head, escribir mal el nombre de una selección) y la suite los detectó
+en todos los casos.
+
+El caso del nombre mal escrito es el más interesante, porque **el primer intento
+no lo detectó**. Al unificar las selecciones en un padrón único, los tests que
+verificaban que cuatro tablas paralelas estuvieran sincronizadas dejaron de
+poder fallar: ahora todo deriva de la misma fila. Un `'Ghana'` → `'Gana'` pasaba
+en verde y hacía desaparecer al equipo de todo cruce contra el dataset. La
+solución fue validar el padrón contra un **testigo externo** — el fixture crudo
+de horarios, escrito a mano desde otra fuente — que además reconstruye los 12
+grupos a partir de quién juega contra quién.
 
 ## 🚀 Cómo correrlo
 
@@ -162,8 +173,9 @@ scripts de análisis corren en cualquier plataforma.
 | `app_data.py` | capa de datos de la app (fixture, scoreboard, overrides, penales) |
 | `prode_app.py` | la app de escritorio (CustomTkinter) |
 | `scoring.py` | reglas de puntaje del prode y la decisión por EV (fuente única) |
+| `teams.py` | padrón único de las 48 selecciones (nombre, castellano, sigla, bandera, grupo) |
 | `groups.py` / `bracket.py` | tablas de grupos (desempate FIFA) y llaves M73–M104 |
-| `tests/` | suite pytest (577 tests) |
+| `tests/` | suite pytest (1187 tests) |
 | `parse_thirds.py` / `thirds_table.json` | tabla oficial de asignación de terceros (495 combos) |
 | `build_horarios.py` / `build_flags.py` / `make_icon.py` | fixture en hora ARG, banderas, ícono |
 
@@ -179,8 +191,8 @@ Los CSV de datos y los pronósticos personales **no se versionan** (ver
 ## 🧭 Roadmap
 
 - De la auditoría interna post-torneo ya salieron la regla de puntaje unificada
-  (`scoring.py`) y la suite de tests. Queda partir `prode_app.py` en módulos más
-  chicos y armar un padrón único de selecciones (hoy viven en estructuras paralelas).
+  (`scoring.py`), el padrón único de selecciones (`teams.py`) y la suite de tests.
+  Queda partir `prode_app.py` en módulos más chicos y un loader de CSV tipado.
 - **Visión v2**: generalizar a un framework multi-deporte/multi-competencia —
   fuentes de datos intercambiables (con modo manual-first), formatos de torneo
   configurables (partido único / llaves / liga) y predictor pluggable por deporte.

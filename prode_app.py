@@ -30,6 +30,7 @@ import customtkinter as ctk
 import app_data
 import groups
 import bracket
+from teams import abbr, es  # padron unico de las 48 selecciones (nombre en ES, sigla)
 
 try:
     import winsound
@@ -48,29 +49,6 @@ except Exception:
     PILImage = None
 
 BASE = Path(__file__).resolve().parent
-
-ES = {
-    "Mexico": "México", "South Africa": "Sudáfrica", "South Korea": "Corea del Sur",
-    "Czech Republic": "Chequia", "Canada": "Canadá", "Bosnia and Herzegovina": "Bosnia",
-    "United States": "Estados Unidos", "Paraguay": "Paraguay", "Qatar": "Catar",
-    "Switzerland": "Suiza", "Brazil": "Brasil", "Morocco": "Marruecos", "Haiti": "Haití",
-    "Scotland": "Escocia", "Australia": "Australia", "Turkey": "Turquía",
-    "Germany": "Alemania", "Curaçao": "Curazao", "Netherlands": "Países Bajos",
-    "Japan": "Japón", "Ivory Coast": "Costa de Marfil", "Ecuador": "Ecuador",
-    "Sweden": "Suecia", "Tunisia": "Túnez", "Spain": "España", "Cape Verde": "Cabo Verde",
-    "Belgium": "Bélgica", "Egypt": "Egipto", "Saudi Arabia": "Arabia Saudita",
-    "Uruguay": "Uruguay", "Iran": "Irán", "New Zealand": "Nueva Zelanda",
-    "France": "Francia", "Senegal": "Senegal", "Iraq": "Irak", "Norway": "Noruega",
-    "Argentina": "Argentina", "Algeria": "Argelia", "Austria": "Austria",
-    "Jordan": "Jordania", "Portugal": "Portugal", "DR Congo": "RD Congo",
-    "England": "Inglaterra", "Croatia": "Croacia", "Ghana": "Ghana", "Panama": "Panamá",
-    "Uzbekistan": "Uzbekistán", "Colombia": "Colombia",
-}
-def es(name: str) -> str:
-    if not name:
-        return ""
-    return ES.get(name, name)
-
 
 F = "Segoe UI"
 BG = "#15151b"; CARD = "#1f1f29"; CARD2 = "#262633"
@@ -952,7 +930,7 @@ class App(ctk.CTk):
         lost = win is not None and not won
         col = GOOD if won else (SUB if lost else TXT)
         wt = "bold" if won else "normal"
-        ctk.CTkLabel(parent, image=self.flags.get(team), text=" " + app_data.ABBR.get(team, es(team)),
+        ctk.CTkLabel(parent, image=self.flags.get(team), text=" " + abbr(team),
                      compound="left", font=(F, 11, wt), text_color=col).pack(side="left")
         real = km.get("real")
         if real is not None:                            # goles a la derecha (+ penales entre paréntesis)

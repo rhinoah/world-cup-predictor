@@ -17,10 +17,12 @@ import numpy as np
 import pandas as pd
 
 import scoring
+from teams import ABBR, FLAG_ISO, HOSTS  # noqa: F401  (padron unico; se re-exportan)
 
 BASE = Path(__file__).resolve().parent
 # --- constantes del torneo (fuente unica; el resto de los scripts las importan) ---
-HOSTS = {"United States", "Mexico", "Canada"}   # unicos que juegan de local
+# HOSTS/ABBR/FLAG_ISO viven en teams.py (padron unico de las 48 selecciones) y se
+# re-exportan aca por comodidad: app_data es lo que importa la GUI.
 TOURNAMENT = "FIFA World Cup"
 WC_START = "2026-06-11"                         # filtro para aislar el Mundial 2026
 
@@ -50,36 +52,6 @@ PRODE_CFG = _load_prodes()
 PRODES = {p["name"]: (p["exact"], p["dir"]) for p in PRODE_CFG}
 PRODE_NAMES = [p["name"] for p in PRODE_CFG]
 PRODE_SHORT = [p["short"] for p in PRODE_CFG]
-
-# seleccion -> codigo de bandera (flagcdn / ISO 3166-1, con casos UK especiales)
-FLAG_ISO = {
-    "Mexico": "mx", "South Africa": "za", "South Korea": "kr", "Czech Republic": "cz",
-    "Canada": "ca", "Bosnia and Herzegovina": "ba", "United States": "us", "Paraguay": "py",
-    "Qatar": "qa", "Switzerland": "ch", "Brazil": "br", "Morocco": "ma", "Haiti": "ht",
-    "Scotland": "gb-sct", "Australia": "au", "Turkey": "tr", "Germany": "de", "Curaçao": "cw",
-    "Netherlands": "nl", "Japan": "jp", "Ivory Coast": "ci", "Ecuador": "ec", "Sweden": "se",
-    "Tunisia": "tn", "Spain": "es", "Cape Verde": "cv", "Belgium": "be", "Egypt": "eg",
-    "Saudi Arabia": "sa", "Uruguay": "uy", "Iran": "ir", "New Zealand": "nz", "France": "fr",
-    "Senegal": "sn", "Iraq": "iq", "Norway": "no", "Argentina": "ar", "Algeria": "dz",
-    "Austria": "at", "Jordan": "jo", "Portugal": "pt", "DR Congo": "cd", "England": "gb-eng",
-    "Croatia": "hr", "Ghana": "gh", "Panama": "pa", "Uzbekistan": "uz", "Colombia": "co",
-}
-
-# siglas de 3 letras (para el bracket, donde el espacio es chico)
-ABBR = {
-    "Mexico": "MEX", "South Africa": "RSA", "South Korea": "KOR", "Czech Republic": "CZE",
-    "Canada": "CAN", "Bosnia and Herzegovina": "BIH", "Switzerland": "SUI", "Qatar": "QAT",
-    "United States": "USA", "Paraguay": "PAR", "Turkey": "TUR", "Australia": "AUS",
-    "Brazil": "BRA", "Morocco": "MAR", "Scotland": "SCO", "Haiti": "HAI",
-    "Germany": "GER", "Ivory Coast": "CIV", "Ecuador": "ECU", "Curaçao": "CUW",
-    "Netherlands": "NED", "Japan": "JPN", "Sweden": "SWE", "Tunisia": "TUN",
-    "Belgium": "BEL", "Egypt": "EGY", "Iran": "IRN", "New Zealand": "NZL",
-    "Spain": "ESP", "Uruguay": "URU", "Saudi Arabia": "KSA", "Cape Verde": "CPV",
-    "France": "FRA", "Senegal": "SEN", "Norway": "NOR", "Iraq": "IRQ",
-    "Argentina": "ARG", "Algeria": "ALG", "Austria": "AUT", "Jordan": "JOR",
-    "Portugal": "POR", "Colombia": "COL", "Uzbekistan": "UZB", "DR Congo": "COD",
-    "England": "ENG", "Croatia": "CRO", "Ghana": "GHA", "Panama": "PAN",
-}
 
 CHANGE_LIMIT_MIN = 70             # se puede cambiar el pronostico hasta 1h10 antes
 GROUPS_END = pd.Timestamp("2026-06-27")   # ultimo dia de fase de grupos

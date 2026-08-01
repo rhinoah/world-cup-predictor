@@ -16,6 +16,10 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
+# Los nombres de worldcuppass se normalizan a los de martj42 con el padron unico
+# (teams.ALIASES): si aparece una fuente nueva, se suma el alias alla, no aca.
+from teams import canonical as norm
+
 # fecha_ET | home | away | kickoff_ET (24h). Fuente: worldcuppass.com
 RAW = """\
 2026-06-11|Mexico|South Africa|15:00
@@ -91,19 +95,6 @@ RAW = """\
 2026-06-27|Algeria|Austria|22:00
 2026-06-27|Jordan|Argentina|22:00
 """
-
-# nombres de worldcuppass -> nombres de martj42
-ALIAS = {
-    "USA": "United States",
-    "Czechia": "Czech Republic",
-    "Türkiye": "Turkey",
-    "Cabo Verde": "Cape Verde",
-}
-
-
-def norm(n: str) -> str:
-    n = n.strip()
-    return ALIAS.get(n, n)
 
 
 def main():
