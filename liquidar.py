@@ -13,10 +13,10 @@ Uso:
 """
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 
 import app_data
+import csv_io
 import scoring
 from predict_match_v2 import apply_manual_overrides
 
@@ -30,11 +30,9 @@ def prode_points(ph, pa, rh, ra) -> int:
 
 
 def main():
-    pron = pd.read_csv(PRON)
-    pron["date"] = pd.to_datetime(pron["date"], errors="coerce")
+    pron = csv_io.read(PRON, csv_io.PRONOSTICOS)
 
-    res = pd.read_csv(RESULTS)
-    res["date"] = pd.to_datetime(res["date"], errors="coerce")
+    res = csv_io.read(RESULTS, csv_io.RESULTS)
     res = apply_manual_overrides(res)
     # Cruzar por EQUIPOS dentro del Mundial 2026, no por fecha exacta: la fecha del pronostico de
     # eliminacion a veces difiere 1 dia de la del dataset (zona horaria) y dejaba partidos jugados
@@ -67,11 +65,7 @@ def main():
             newly += 1
 
     if newly or fixed:
-        out = pron.copy()
-        out["date"] = out["date"].dt.strftime("%Y-%m-%d")
-        for c in ("actual_home", "actual_away", "points"):
-            out[c] = pd.to_numeric(out[c], errors="coerce").astype("Int64")
-        out.to_csv(PRON, index=False)
+        csv_io.write(pron, PRON, csv_io.PRONOSTICOS)
 
     done = pron[pron["points"].notna()].copy()
     pend = len(pron) - len(done)

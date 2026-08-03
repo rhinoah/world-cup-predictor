@@ -247,7 +247,7 @@ def test_set_result_sin_penales_limpia_los_penales_previos(project):
 
 
 def test_set_result_de_partido_desconocido_deja_la_fecha_vacia(project):
-    """Si el cruce no esta en results.csv, `_match_date` devuelve "" (no rompe)."""
+    """Si el cruce no esta en results.csv, `_match_date` devuelve NA (no rompe)."""
     project.results([{"home_team": "Spain", "away_team": "Argentina"}])
 
     app_data.set_result("Ghana", "Peru", 0, 0)

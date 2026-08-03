@@ -17,6 +17,7 @@ import argparse
 
 import pandas as pd
 
+import csv_io
 from predict_match_v2 import fit_iterative, load_results, apply_manual_overrides
 from elo import compute_elo
 from predict_match_v3 import predict
@@ -26,11 +27,11 @@ RAW = "data/results.csv"
 
 
 def load_fixture() -> pd.DataFrame:
-    df = pd.read_csv(RAW)
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df = apply_manual_overrides(df)              # un override ya jugado deja de ser "pendiente"
-    df["neutral"] = df["neutral"].astype(str).str.upper().eq("TRUE")
-    return df
+    df = csv_io.read(RAW, csv_io.RESULTS)
+    # Un override ya jugado deja de ser "pendiente". La sede no se toca aca: la
+    # decide `h not in HOSTS` mas abajo, porque en el Mundial solo los anfitriones
+    # juegan de local.
+    return apply_manual_overrides(df)
 
 
 def main():

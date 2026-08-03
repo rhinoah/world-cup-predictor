@@ -13,6 +13,7 @@ import json
 
 import pandas as pd
 
+import csv_io
 from predict_match_v2 import load_results, fit_iterative
 from elo import compute_elo
 from predict_match_v3 import predict
@@ -35,8 +36,7 @@ def main():
     wc = df[(df["tournament"] == TOURNAMENT) & (df["date"] >= WC_START)]
     played = set(zip(wc["home_team"], wc["away_team"]))
 
-    hor = pd.read_csv("fixture_horarios.csv")
-    hor["kickoff_arg"] = pd.to_datetime(hor["kickoff_arg"])
+    hor = csv_io.read("fixture_horarios.csv", csv_io.HORARIOS)
 
     out = []
     for _, h in hor.sort_values("kickoff_arg").iterrows():
@@ -46,7 +46,7 @@ def main():
         r = predict(ht, at, ht not in HOSTS, p, elo)
         out.append({
             "home": ht, "away": at,
-            "kickoff_arg": h["kickoff_arg"].strftime("%Y-%m-%d %H:%M"),
+            "kickoff_arg": h["kickoff_arg"].strftime(csv_io.TIMESTAMP_FMT),
             "host": ht in HOSTS,
             "best": list(r["best"]), "ev": round(r["best_ev"], 3),
             "lh": round(r["lh"], 2), "la": round(r["la"], 2),

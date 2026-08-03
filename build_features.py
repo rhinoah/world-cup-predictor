@@ -37,6 +37,8 @@ from pathlib import Path
 
 import pandas as pd
 
+import csv_io
+
 BASE_URL = "https://raw.githubusercontent.com/martj42/international_results/master"
 FILES = ["results.csv", "goalscorers.csv", "shootouts.csv", "former_names.csv"]
 
@@ -71,13 +73,11 @@ def download_data(force: bool = True) -> None:
 
 def load_results() -> pd.DataFrame:
     """Carga results.csv y lo normaliza (fechas, neutral, scores)."""
-    df = pd.read_csv(DATA_DIR / "results.csv")
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df["neutral"] = df["neutral"].astype(str).str.upper().eq("TRUE")
+    df = csv_io.read(DATA_DIR / "results.csv", csv_io.RESULTS)
     # tirar partidos sin marcador (suspendidos, futuros, etc.)
     df = df.dropna(subset=["home_score", "away_score", "date"])
-    df["home_score"] = df["home_score"].astype(int)
-    df["away_score"] = df["away_score"].astype(int)
+    df["neutral"] = df["neutral"].fillna(False)     # sin dato = no neutral
+    df = csv_io.to_plain(df, csv_io.RESULTS)        # numpy plano para el resto
     return df.sort_values("date").reset_index(drop=True)
 
 

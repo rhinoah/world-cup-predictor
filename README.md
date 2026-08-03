@@ -107,7 +107,7 @@ a un mercado real durante un Mundial.
 
 ## 🧪 Tests
 
-**1187 tests** (pytest) sobre el modelo y la capa de datos, corriendo en CI para
+**1343 tests** (pytest) sobre el modelo y la capa de datos, corriendo en CI para
 Python 3.11 y 3.13:
 
 ```bash
@@ -119,8 +119,15 @@ Cubren la regla de puntaje y la decisión por EV, el scoreboard por prode, los
 estados de un partido (incluida la ventana extendida de eliminación y el
 override manual), el desempate FIFA de los grupos (con enfrentamiento directo),
 las invariantes del bracket y la tabla oficial de terceros, el padrón de
-selecciones, el Elo (invariante de suma cero y ausencia de leakage) y los
-dtypes de los CSV.
+selecciones, el Elo (invariante de suma cero y ausencia de leakage) y la
+lectura/escritura tipada de los CSV.
+
+Los refactors grandes se validaron además con un **arnés de equivalencia**: un
+script que captura ~40 magnitudes observables (salida del modelo, Elo,
+probabilidades de partidos concretos, los 104 partidos con todos sus campos,
+posiciones, puntajes) antes y después del cambio, y las compara una por una.
+Es lo que permite refactorizar la capa de datos y afirmar que el modelo devuelve
+exactamente lo mismo, en vez de suponerlo.
 
 Se validaron con **mutation testing**: se inyectaron bugs a propósito (anular
 los puntos por dirección, acortar la ventana de eliminación, romper el desempate
@@ -135,6 +142,21 @@ en verde y hacía desaparecer al equipo de todo cruce contra el dataset. La
 solución fue validar el padrón contra un **testigo externo** — el fixture crudo
 de horarios, escrito a mano desde otra fuente — que además reconstruye los 12
 grupos a partir de quién juega contra quién.
+
+### Vacío no es lo mismo que ilegible
+
+`csv_io.py` distingue las dos cosas, y la distinción salió de una revisión
+adversarial del propio módulo. La primera versión hacía la lectura tolerante en
+todas las columnas: lo que no se entendía quedaba en nulo, para que un CSV
+editado a mano nunca dejara la app sin arrancar. Suena razonable hasta que se ve
+la consecuencia: un `2-1` tipeado en la columna de goles se convertía en nulo,
+la fila se caía en el `dropna` del override, y **el partido pasaba a figurar
+como no jugado** — el tablero mostraba un número equivocado sin dejar rastro.
+
+Hoy cada columna declara si tolera basura. Que un partido no tenga marcador es
+normal (todavía no se jugó); que tenga escrito algo que no se entiende, no:
+`home_score` avisa con el archivo, la columna y la fila. `home_pens`, que está
+vacía en el 96% de los partidos, sigue siendo tolerante.
 
 ## 🚀 Cómo correrlo
 
@@ -174,8 +196,9 @@ scripts de análisis corren en cualquier plataforma.
 | `prode_app.py` | la app de escritorio (CustomTkinter) |
 | `scoring.py` | reglas de puntaje del prode y la decisión por EV (fuente única) |
 | `teams.py` | padrón único de las 48 selecciones (nombre, castellano, sigla, bandera, grupo) |
+| `csv_io.py` | lectura/escritura tipada de los CSV (dtypes en un solo lugar) |
 | `groups.py` / `bracket.py` | tablas de grupos (desempate FIFA) y llaves M73–M104 |
-| `tests/` | suite pytest (1187 tests) |
+| `tests/` | suite pytest (1343 tests) |
 | `parse_thirds.py` / `thirds_table.json` | tabla oficial de asignación de terceros (495 combos) |
 | `build_horarios.py` / `build_flags.py` / `make_icon.py` | fixture en hora ARG, banderas, ícono |
 
@@ -191,8 +214,9 @@ Los CSV de datos y los pronósticos personales **no se versionan** (ver
 ## 🧭 Roadmap
 
 - De la auditoría interna post-torneo ya salieron la regla de puntaje unificada
-  (`scoring.py`), el padrón único de selecciones (`teams.py`) y la suite de tests.
-  Queda partir `prode_app.py` en módulos más chicos y un loader de CSV tipado.
+  (`scoring.py`), el padrón único de selecciones (`teams.py`),
+  el loader de CSV tipado (`csv_io.py`) y la suite de tests. Queda partir
+  `prode_app.py` en módulos más chicos y reestructurar el repo en carpetas.
 - **Visión v2**: generalizar a un framework multi-deporte/multi-competencia —
   fuentes de datos intercambiables (con modo manual-first), formatos de torneo
   configurables (partido único / llaves / liga) y predictor pluggable por deporte.

@@ -29,6 +29,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import csv_io
 import scoring
 
 DATA = Path("data/results.csv")
@@ -46,15 +47,12 @@ def apply_manual_overrides(df: pd.DataFrame) -> pd.DataFrame:
     home_score,away_score). Solo rellena los que estan vacios; nunca pisa un
     resultado oficial. Sirve para cargar a mano un partido ya jugado mientras
     el dataset publico tarda en actualizarse."""
-    path = DATA.parent / "manual_results.csv"
-    if not path.exists():
-        return df
-    man = pd.read_csv(path)
+    man = csv_io.read(DATA.parent / "manual_results.csv", csv_io.MANUAL_RESULTS,
+                      missing_ok=True)
     man = man.dropna(subset=["date", "home_team", "away_team",
                              "home_score", "away_score"])
     if man.empty:
         return df
-    man["date"] = pd.to_datetime(man["date"], errors="coerce")
     key = ["date", "home_team", "away_team"]
     df = df.merge(man[key + ["home_score", "away_score"]], on=key,
                   how="left", suffixes=("", "_m"))
@@ -64,13 +62,16 @@ def apply_manual_overrides(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_results(as_of: pd.Timestamp | None = None) -> pd.DataFrame:
-    df = pd.read_csv(DATA)
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df = csv_io.read(DATA, csv_io.RESULTS)
     df = apply_manual_overrides(df)
     df = df.dropna(subset=["home_score", "away_score", "date"])
-    df["home_score"] = df["home_score"].astype(int)
-    df["away_score"] = df["away_score"].astype(int)
-    df["neutral"] = df["neutral"].astype(str).str.upper().eq("TRUE")
+    # Una sede sin dato se cuenta como NO neutral, que es lo que hacia el parseo
+    # viejo (`str(NaN).upper() != "TRUE"`). Se deja explicito para que no
+    # dependa de un accidente del casteo.
+    df["neutral"] = df["neutral"].fillna(False)
+    # A partir de aca manda numpy: fit_iterative y compute_elo hacen .to_numpy()
+    # y los dtypes nullable devuelven masked arrays.
+    df = csv_io.to_plain(df, csv_io.RESULTS)
     df = df.sort_values("date").reset_index(drop=True)
     if as_of is not None:
         df = df[df["date"] < as_of].reset_index(drop=True)

@@ -13,9 +13,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
+import csv_io
 import scoring
 from teams import ABBR, FLAG_ISO, HOSTS  # noqa: F401  (padron unico; se re-exportan)
 
@@ -82,12 +82,8 @@ def _finished_set():
     """Partidos marcados a mano como 'ya terminó' (override del reloj). Cacheado."""
     global _FINISHED
     if _FINISHED is None:
-        mp = BASE / "data" / "finished.csv"
-        if mp.exists():
-            df = pd.read_csv(mp)
-            _FINISHED = set(zip(df["home_team"], df["away_team"]))
-        else:
-            _FINISHED = set()
+        df = csv_io.read(BASE / "data" / "finished.csv", csv_io.FINISHED, missing_ok=True)
+        _FINISHED = set(zip(df["home_team"], df["away_team"]))
     return _FINISHED
 
 
@@ -95,13 +91,13 @@ def set_finished(home, away, val=True):
     """Marca/desmarca un partido como terminado a mano (data/finished.csv)."""
     global _FINISHED
     mp = BASE / "data" / "finished.csv"
-    df = pd.read_csv(mp) if mp.exists() else pd.DataFrame(columns=["home_team", "away_team"])
+    df = csv_io.read(mp, csv_io.FINISHED, missing_ok=True)
     mask = (df["home_team"] == home) & (df["away_team"] == away)
     if val and not mask.any():
         df = pd.concat([df, pd.DataFrame([{"home_team": home, "away_team": away}])], ignore_index=True)
     elif not val:
         df = df[~mask]
-    df.to_csv(mp, index=False)
+    csv_io.write(df, mp, csv_io.FINISHED)
     _FINISHED = None                      # invalida cache
 
 
@@ -119,20 +115,15 @@ def match_state(kickoff, now=None, home=None, away=None):
         return "live"
     return "done"
 
-PRON_COLS = ["date", "home_team", "away_team", "pred_home", "pred_away", "neutral",
-             "model", "ev_v3", "actual_home", "actual_away", "points", "notes",
-             "load_gel", "load_meli"]
+PRON_COLS = list(csv_io.PRONOSTICOS)      # el esquema manda el orden de columnas
 
 
 def _apply_override(res: pd.DataFrame) -> pd.DataFrame:
     mp = BASE / "data" / "manual_results.csv"
-    if not mp.exists():
-        return res
-    man = pd.read_csv(mp).dropna(subset=["date", "home_team", "away_team",
-                                         "home_score", "away_score"])
+    man = csv_io.read(mp, csv_io.MANUAL_RESULTS, missing_ok=True).dropna(
+        subset=["date", "home_team", "away_team", "home_score", "away_score"])
     if man.empty:
         return res
-    man["date"] = pd.to_datetime(man["date"], errors="coerce")
     key = ["date", "home_team", "away_team"]
     res = res.merge(man[key + ["home_score", "away_score"]], on=key,
                     how="left", suffixes=("", "_m"))
@@ -144,37 +135,49 @@ def _apply_override(res: pd.DataFrame) -> pd.DataFrame:
 def _pens_index():
     """Penales cargados a mano: {(home, away): (hp, ap)} (solo definiciones por
     penales en eliminacion). Vacio si no hay overrides con penales."""
-    mp = BASE / "data" / "manual_results.csv"
-    if not mp.exists():
-        return {}
-    man = pd.read_csv(mp)
-    idx = {}
-    for _, r in man.iterrows():
-        hp = pd.to_numeric(r.get("home_pens"), errors="coerce")
-        ap = pd.to_numeric(r.get("away_pens"), errors="coerce")
-        if pd.notna(hp) and pd.notna(ap):
-            idx[(r["home_team"], r["away_team"])] = (int(hp), int(ap))
-    return idx
+    man = csv_io.read(BASE / "data" / "manual_results.csv", csv_io.MANUAL_RESULTS,
+                     missing_ok=True)
+    con_pens = man.dropna(subset=["home_pens", "away_pens"])
+    return {(r["home_team"], r["away_team"]): (int(r["home_pens"]), int(r["away_pens"]))
+            for _, r in con_pens.iterrows()}
 
 
 def _load():
-    res = pd.read_csv(BASE / "data" / "results.csv")
-    res["date"] = pd.to_datetime(res["date"], errors="coerce")
+    res = csv_io.read(BASE / "data" / "results.csv", csv_io.RESULTS)
     res = _apply_override(res)
-    hor = pd.read_csv(BASE / "fixture_horarios.csv")
-    hor["kickoff_arg"] = pd.to_datetime(hor["kickoff_arg"])
-    pron_path = BASE / "pronosticos.csv"
-    pron = pd.read_csv(pron_path) if pron_path.exists() else pd.DataFrame()
+    hor = csv_io.read(BASE / "fixture_horarios.csv", csv_io.HORARIOS)
+    pron = csv_io.read(BASE / "pronosticos.csv", csv_io.PRONOSTICOS, missing_ok=True)
     return res, hor, pron
 
 
 def _int_or0(v):
+    """Casteo de las columnas de carga: 'sin marcar' es lo mismo que 'no cargado'.
+
+    Ya no tiene que defenderse del "" que escribia el codigo viejo (csv_io lee
+    esas columnas como Int64 y el faltante llega como pd.NA), pero sigue siendo
+    la politica de la app: si no hay dato, el pronostico no se cargo."""
     try:
         if v == "" or pd.isna(v):
             return 0
         return int(v)
     except Exception:
         return 0
+
+
+def _index_pronosticos(pron):
+    """Indexa los pronosticos por (local, visitante): {clave: (ph, pa)} y
+    {clave: (cargado_en_prode_1, cargado_en_prode_2)}.
+
+    Antes cada llamador chequeaba `"load_gel" in pron.columns` porque el CSV
+    podia no traer la columna; hoy csv_io la crea siempre desde el esquema, asi
+    que alcanza con `_int_or0` para el caso de la celda vacia."""
+    pred_idx, load_idx = {}, {}
+    for _, r in pron.iterrows():
+        clave = (r["home_team"], r["away_team"])
+        if pd.notna(r["pred_home"]):
+            pred_idx[clave] = (int(r["pred_home"]), int(r["pred_away"]))
+        load_idx[clave] = (_int_or0(r["load_gel"]), _int_or0(r["load_meli"]))
+    return pred_idx, load_idx
 
 
 def fixture():
@@ -184,15 +187,7 @@ def fixture():
     played = wc.dropna(subset=["home_score", "away_score"])
     res_idx = played.set_index(["home_team", "away_team"])[["home_score", "away_score"]].sort_index()
 
-    pred_idx, load_idx = {}, {}
-    has_gel = "load_gel" in pron.columns
-    has_meli = "load_meli" in pron.columns
-    for _, r in pron.iterrows():
-        if pd.notna(r.get("pred_home")):
-            pred_idx[(r["home_team"], r["away_team"])] = (int(r["pred_home"]), int(r["pred_away"]))
-        load_idx[(r["home_team"], r["away_team"])] = (
-            _int_or0(r.get("load_gel")) if has_gel else 0,
-            _int_or0(r.get("load_meli")) if has_meli else 0)
+    pred_idx, load_idx = _index_pronosticos(pron)
 
     out = []
     for _, h in hor.sort_values("kickoff_arg").iterrows():
@@ -222,13 +217,7 @@ def knockout_fixture():
     res_idx = wc.dropna(subset=["home_score", "away_score"]).set_index(
         ["home_team", "away_team"])[["home_score", "away_score"]].sort_index()
 
-    pred_idx, load_idx = {}, {}
-    hg, hm = "load_gel" in pron.columns, "load_meli" in pron.columns
-    for _, r in pron.iterrows():
-        if pd.notna(r.get("pred_home")):
-            pred_idx[(r["home_team"], r["away_team"])] = (int(r["pred_home"]), int(r["pred_away"]))
-        load_idx[(r["home_team"], r["away_team"])] = (
-            _int_or0(r.get("load_gel")) if hg else 0, _int_or0(r.get("load_meli")) if hm else 0)
+    pred_idx, load_idx = _index_pronosticos(pron)
 
     def real_of(ht, at):
         if ht and at and (ht, at) in res_idx.index:
@@ -368,19 +357,19 @@ def scoreboard(fx=None, now=None):
 
 def _read_pron():
     path = BASE / "pronosticos.csv"
-    pron = pd.read_csv(path) if path.exists() else pd.DataFrame(columns=PRON_COLS)
+    pron = csv_io.read(path, csv_io.PRONOSTICOS, missing_ok=True)
+    # "sin marcar" es lo mismo que "no cargado": se persiste 0 y no vacio, para
+    # que el CSV diga explicitamente que el pronostico no se cargo en ese prode.
     for c in ("load_gel", "load_meli"):
-        if c not in pron.columns:
-            pron[c] = 0
+        pron[c] = pron[c].fillna(0)
     return pron, path
 
 
 def _match_date(home, away):
-    res = pd.read_csv(BASE / "data" / "results.csv")
-    res["date"] = pd.to_datetime(res["date"], errors="coerce")
+    res = csv_io.read(BASE / "data" / "results.csv", csv_io.RESULTS)
     m = res[(res["home_team"] == home) & (res["away_team"] == away)
             & (res["tournament"] == TOURNAMENT) & (res["date"] >= pd.Timestamp(WC_START))]
-    return m.iloc[0]["date"].strftime("%Y-%m-%d") if len(m) else ""
+    return m.iloc[0]["date"] if len(m) else pd.NA
 
 
 def set_prediction(home, away, ph, pa):
@@ -394,13 +383,15 @@ def set_prediction(home, away, ph, pa):
         pron.loc[mask, "load_gel"] = 0      # cambio el pronostico -> hay que recargarlo
         pron.loc[mask, "load_meli"] = 0
     else:
-        row = {c: "" for c in PRON_COLS}
+        # pd.NA y no "": el "" es lo que rompia el dtype de las columnas
+        # numericas al releer el CSV (ver csv_io).
+        row = {c: pd.NA for c in PRON_COLS}
         row.update({"date": _match_date(home, away), "home_team": home, "away_team": away,
                     "pred_home": int(ph), "pred_away": int(pa),
                     "neutral": home not in HOSTS, "model": "manual",
                     "load_gel": 0, "load_meli": 0})
         pron = pd.concat([pron, pd.DataFrame([row])], ignore_index=True)
-    pron.to_csv(path, index=False)
+    csv_io.write(pron, path, csv_io.PRONOSTICOS)
 
 
 def set_confirmation(home, away, gel=None, meli=None, pred=None):
@@ -418,20 +409,18 @@ def set_confirmation(home, away, gel=None, meli=None, pred=None):
         pron.loc[mask, "load_gel"] = int(bool(gel))
     if meli is not None:
         pron.loc[mask, "load_meli"] = int(bool(meli))
-    pron.to_csv(path, index=False)
+    csv_io.write(pron, path, csv_io.PRONOSTICOS)
 
 
 def set_result(home, away, rh, ra, pens=None):
     """Carga/edita el resultado final en data/manual_results.csv (override).
     pens = (penales_local, penales_visita) si el partido se definio por penales
     (eliminacion). El override solo completa lo que el dataset oficial no tiene."""
-    cols = ["date", "home_team", "away_team", "home_score", "away_score", "home_pens", "away_pens"]
     mp = BASE / "data" / "manual_results.csv"
-    man = pd.read_csv(mp) if mp.exists() else pd.DataFrame(columns=cols)
-    # penales SIEMPRE numericas (numero o NaN); nunca "" para no romper el dtype float
-    for c in ("home_pens", "away_pens"):
-        man[c] = pd.to_numeric(man[c], errors="coerce") if c in man.columns else np.nan
-    ph, pa = (int(pens[0]), int(pens[1])) if pens else (np.nan, np.nan)
+    # Las columnas de penales quedan enteras con faltantes (Int64) por esquema:
+    # antes habia que re-castearlas a mano en cada guardado o se degradaban.
+    man = csv_io.read(mp, csv_io.MANUAL_RESULTS, missing_ok=True)
+    ph, pa = (int(pens[0]), int(pens[1])) if pens else (pd.NA, pd.NA)
     mask = (man["home_team"] == home) & (man["away_team"] == away)
     if mask.any():
         man.loc[mask, "home_score"] = int(rh)
@@ -442,7 +431,7 @@ def set_result(home, away, rh, ra, pens=None):
         man = pd.concat([man, pd.DataFrame([{"date": _match_date(home, away), "home_team": home,
                                              "away_team": away, "home_score": int(rh), "away_score": int(ra),
                                              "home_pens": ph, "away_pens": pa}])], ignore_index=True)
-    man.to_csv(mp, index=False)
+    csv_io.write(man, mp, csv_io.MANUAL_RESULTS)
 
 
 if __name__ == "__main__":

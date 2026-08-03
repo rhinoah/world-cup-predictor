@@ -24,13 +24,13 @@ import os
 import sys
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
+import csv_io
 from predict_match_v2 import load_results, fit_iterative
 from elo import compute_elo
 from predict_match_v3 import predict
@@ -39,13 +39,12 @@ GROUPS_END = pd.Timestamp("2026-06-27")   # ultimo dia de la fase de grupos
 
 
 def main():
-    pron = pd.read_csv(BASE / "pronosticos.csv")
-    pron["date"] = pd.to_datetime(pron["date"], errors="coerce")
+    pron = csv_io.read(BASE / "pronosticos.csv", csv_io.PRONOSTICOS)
     if pron["date"].isna().any():
         bad = pron[pron["date"].isna()][["home_team", "away_team"]].values.tolist()
         raise SystemExit(f"Hay filas sin fecha; completalas antes de correr: {bad}")
 
-    neutral = pron["neutral"].astype(str).str.upper().eq("TRUE")
+    neutral = pron["neutral"].fillna(False)
     rows = []
     dates = sorted(pron["date"].unique())
     print(f"backfill de EV: {len(pron)} pronosticos en {len(dates)} fechas "
@@ -74,12 +73,8 @@ def main():
                          "phase": "elim" if as_of > GROUPS_END else "grupos"})
         print(f"[{n:>2}/{len(dates)}] {as_of.date()}  ok ({len(day)} partidos)", flush=True)
 
-    # persistir ev_v3 sin degradar el formato del CSV
-    out = pron.copy()
-    out["date"] = out["date"].dt.strftime("%Y-%m-%d")
-    for c in ("actual_home", "actual_away", "points"):
-        out[c] = pd.to_numeric(out[c], errors="coerce").astype("Int64")
-    out.to_csv(BASE / "pronosticos.csv", index=False)
+    # persistir ev_v3 (el esquema se encarga de no degradar el formato)
+    csv_io.write(pron, BASE / "pronosticos.csv", csv_io.PRONOSTICOS)
     print(f"\npronosticos.csv actualizado ({len(rows)} filas con ev_v3)", flush=True)
 
     # ---------------- reporte real vs esperado ----------------
