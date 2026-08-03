@@ -184,6 +184,13 @@ python predict_match_v3.py "Spain" "Argentina" --neutral   # un partido puntual
 pytest                                                     # la suite de tests
 ```
 
+Y opcionalmente, en Windows, dejarlo andando solo (tarea diaria + arranque
+minimizado en la bandeja). Es reversible y no necesita permisos de administrador:
+
+```bash
+setup_windows.bat install 10:00   # o "status" / "uninstall"
+```
+
 La GUI usa `winsound`/`pystray` y está pensada para **Windows**; el modelo y los
 scripts de análisis corren en cualquier plataforma.
 
@@ -192,6 +199,7 @@ scripts de análisis corren en cualquier plataforma.
 | Archivo | Qué hace |
 |---|---|
 | `run.py` | el pipeline: `setup` / `update` / `analisis` (única definición del orden) |
+| `Prode.bat` / `update_dataset.bat` / `setup_windows.bat` | lanzar la app / correr el ciclo diario / instalar la automatización |
 | `build_features.py` | descarga el dataset y construye la tabla de features |
 | `elo.py` | rating Elo dinámico + blend de lambdas |
 | `predict_match_v2.py` / `_v3.py` | modelo de fuerzas / blend con Elo (**producción**) |
