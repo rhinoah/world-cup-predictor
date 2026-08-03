@@ -193,7 +193,9 @@ scripts de análisis corren en cualquier plataforma.
 | `liquidar.py` | cruza pronósticos con resultados y calcula el puntaje |
 | `backfill_ev.py` | recalcula el EV as-of de cada pronóstico (real vs esperado) |
 | `app_data.py` | capa de datos de la app (fixture, scoreboard, overrides, penales) |
-| `prode_app.py` | la app de escritorio (CustomTkinter) |
+| `prode_app.py` | la app de escritorio (CustomTkinter): ventana principal |
+| `ui_bracket.py` / `ui_tray.py` | ventanas de grupos y llaves / bandeja, bips e instancia única |
+| `theme.py` / `single_instance.py` | paleta y tipografía / lock de una sola ventana |
 | `scoring.py` | reglas de puntaje del prode y la decisión por EV (fuente única) |
 | `teams.py` | padrón único de las 48 selecciones (nombre, castellano, sigla, bandera, grupo) |
 | `csv_io.py` | lectura/escritura tipada de los CSV (dtypes en un solo lugar) |
@@ -215,9 +217,9 @@ Los CSV de datos y los pronósticos personales **no se versionan** (ver
 ## 🧭 Roadmap
 
 - De la auditoría interna post-torneo ya salieron la regla de puntaje unificada
-  (`scoring.py`), el padrón único de selecciones (`teams.py`),
-  el loader de CSV tipado (`csv_io.py`) y la suite de tests. Queda partir
-  `prode_app.py` en módulos más chicos y reestructurar el repo en carpetas.
+  (`scoring.py`), el padrón único de selecciones (`teams.py`), el loader de CSV
+  tipado (`csv_io.py`), la separación de la GUI en módulos y la suite de tests.
+  Queda reestructurar el repo en carpetas y sumar capturas de la app.
 - **Visión v2**: generalizar a un framework multi-deporte/multi-competencia —
   fuentes de datos intercambiables (con modo manual-first), formatos de torneo
   configurables (partido único / llaves / liga) y predictor pluggable por deporte.
