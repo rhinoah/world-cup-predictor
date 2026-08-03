@@ -30,6 +30,7 @@ import numpy as np
 import pandas as pd
 
 import csv_io
+import results
 import scoring
 
 DATA = Path("data/results.csv")
@@ -42,28 +43,15 @@ N_ITER = 60
 
 
 def apply_manual_overrides(df: pd.DataFrame) -> pd.DataFrame:
-    """Completa marcadores que martj42 todavia no publico, desde
-    data/manual_results.csv (mismo esquema: date,home_team,away_team,
-    home_score,away_score). Solo rellena los que estan vacios; nunca pisa un
-    resultado oficial. Sirve para cargar a mano un partido ya jugado mientras
-    el dataset publico tarda en actualizarse."""
-    man = csv_io.read(DATA.parent / "manual_results.csv", csv_io.MANUAL_RESULTS,
-                      missing_ok=True)
-    man = man.dropna(subset=["date", "home_team", "away_team",
-                             "home_score", "away_score"])
-    if man.empty:
-        return df
-    key = ["date", "home_team", "away_team"]
-    df = df.merge(man[key + ["home_score", "away_score"]], on=key,
-                  how="left", suffixes=("", "_m"))
-    for c in ("home_score", "away_score"):
-        df[c] = df[c].where(df[c].notna(), df[f"{c}_m"])
-    return df.drop(columns=["home_score_m", "away_score_m"])
+    """Los resultados cargados a mano, sobre el dataset que llega por parametro.
+
+    Envoltorio de `results.apply_overrides` con la ruta de este modulo: existe
+    porque `liquidar` y `predict_matchday` lo importan con este nombre."""
+    return results.apply_overrides(df, DATA)
 
 
 def load_results(as_of: pd.Timestamp | None = None) -> pd.DataFrame:
-    df = csv_io.read(DATA, csv_io.RESULTS)
-    df = apply_manual_overrides(df)
+    df = results.load(DATA)
     df = df.dropna(subset=["home_score", "away_score", "date"])
     # Una sede sin dato se cuenta como NO neutral, que es lo que hacia el parseo
     # viejo (`str(NaN).upper() != "TRUE"`). Se deja explicito para que no

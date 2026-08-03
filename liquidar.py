@@ -17,8 +17,8 @@ import pandas as pd
 
 import app_data
 import csv_io
+import results
 import scoring
-from predict_match_v2 import apply_manual_overrides
 
 PRON = "pronosticos.csv"
 RESULTS = "data/results.csv"
@@ -32,26 +32,18 @@ def prode_points(ph, pa, rh, ra) -> int:
 def main():
     pron = csv_io.read(PRON, csv_io.PRONOSTICOS)
 
-    res = csv_io.read(RESULTS, csv_io.RESULTS)
-    res = apply_manual_overrides(res)
     # Cruzar por EQUIPOS dentro del Mundial 2026, no por fecha exacta: la fecha del pronostico de
     # eliminacion a veces difiere 1 dia de la del dataset (zona horaria) y dejaba partidos jugados
     # sin liquidar. Cada cruce local-visitante es unico dentro del torneo, asi que alcanza.
-    wc = app_data.wc_matches(res)
-    res_idx = wc.set_index(["home_team", "away_team"])[["home_score", "away_score"]].sort_index()
+    res = results.load(RESULTS)
+    res_idx = results.by_teams(app_data.wc_matches(res))
 
     newly, fixed = 0, 0
     for i, row in pron.iterrows():
-        key = (row["home_team"], row["away_team"])
-        if key not in res_idx.index:
-            continue                                   # no esta en el dataset del Mundial
-        rec = res_idx.loc[key]
-        if isinstance(rec, pd.DataFrame):
-            rec = rec.iloc[0]
-        rh, ra = rec["home_score"], rec["away_score"]
-        if pd.isna(rh) or pd.isna(ra):
-            continue                                   # todavia no se jugo
-        rh, ra = int(rh), int(ra)
+        real = results.score_of(res_idx, row["home_team"], row["away_team"])
+        if real is None:
+            continue                                   # no jugado, o no esta en el dataset
+        rh, ra = real
         had = pd.notna(row.get("actual_home")) and pd.notna(row.get("actual_away"))
         if had and int(row["actual_home"]) == rh and int(row["actual_away"]) == ra:
             continue                                   # ya liquidado y el resultado oficial coincide

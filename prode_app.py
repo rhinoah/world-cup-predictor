@@ -22,6 +22,7 @@ import subprocess
 import sys
 import threading
 import time
+import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -59,6 +60,22 @@ GOOD = "#2ee6a6"; MID = "#ffd23e"; BAD = "#ff5a5a"
 REMIND_HOURS = 3
 BEEP_MIN = 10
 BEEP_MS = 1500
+
+ERROR_LOG = BASE / "prode_error.log"
+
+
+def log_error(que: str, detalle: str = "") -> None:
+    """Anota un error en prode_error.log sin interrumpir a la app.
+
+    La GUI no puede permitirse morir porque falle una tarea de fondo, pero
+    tragarse el error hace que un recalculo que nunca anda parezca que anda.
+    El archivo se abre en modo append: interesa la historia, no el ultimo."""
+    detalle = detalle or traceback.format_exc()
+    try:
+        with ERROR_LOG.open("a", encoding="utf-8") as f:
+            f.write(f"\n[{datetime.now():%Y-%m-%d %H:%M:%S}] {que}\n{detalle.rstrip()}\n")
+    except OSError:
+        pass            # si ni el log se puede escribir, no queda nada por hacer
 
 METHOD_TEXT = (
     "¿Cómo se calculan los pronósticos?\n\n"
@@ -446,7 +463,10 @@ class App(ctk.CTk):
                 self._update_scores()
                 self._update_columns()
         except Exception as e:
+            # En pantalla entra el mensaje corto; el traceback va al log, que es
+            # lo unico que sirve para saber que dato lo rompio.
             self.when_lbl.configure(text=f"error: {e}")
+            log_error("refresh_data")
         self._last_refresh = time.time()
 
     def _data_signature(self, now):
@@ -978,17 +998,30 @@ class App(ctk.CTk):
     def _recalc(self):
         self.recalc_btn.configure(text="recalculando…", state="disabled")
         def run():
+            # El error se anota y se avisa en el boton: antes se tragaba entero,
+            # asi que un recalculo que fallaba siempre se veia igual que uno que
+            # andaba, y los pronosticos quedaban viejos sin que nada lo dijera.
+            ok = False
             try:
-                subprocess.run([sys.executable, str(BASE / "build_pronosticos.py")], cwd=str(BASE), capture_output=True, timeout=180)
-            except Exception:
-                pass
-            self.after(0, self._recalc_done)
+                p = subprocess.run([sys.executable, str(BASE / "build_pronosticos.py")],
+                                   cwd=str(BASE), capture_output=True, timeout=180, text=True)
+                ok = p.returncode == 0
+                if not ok:
+                    log_error(f"build_pronosticos.py salio con codigo {p.returncode}",
+                              (p.stderr or p.stdout or "").strip())
+            except subprocess.TimeoutExpired:
+                log_error("build_pronosticos.py no termino en 180 s", "timeout")
+            except OSError:
+                log_error("no se pudo lanzar build_pronosticos.py")
+            self.after(0, lambda: self._recalc_done(ok))
         threading.Thread(target=run, daemon=True).start()
 
-    def _recalc_done(self):
+    def _recalc_done(self, ok=True):
         self.refresh_data()
         try:
-            self.recalc_btn.configure(text="🔄 recalcular", state="normal")
+            self.recalc_btn.configure(
+                text="🔄 recalcular" if ok else "⚠ falló — ver prode_error.log",
+                state="normal")
         except Exception:
             pass
 
@@ -1078,9 +1111,5 @@ if __name__ == "__main__":
     except SystemExit:
         raise
     except Exception:
-        import traceback
-        try:
-            (BASE / "prode_error.log").write_text(traceback.format_exc(), encoding="utf-8")
-        except Exception:
-            pass
+        log_error("la app se cerro con un error")
         raise

@@ -7,7 +7,7 @@ fuerza `pd.to_numeric(..., errors="coerce")` y usa `np.nan` -- nunca `""`.
 Bajo test:
   * `app_data._int_or0`  -- casteo defensivo de las columnas de carga.
   * `app_data.set_result` / `_pens_index` -- override manual de resultados y penales.
-  * `app_data._apply_override` -- completar el dataset sin pisar lo oficial.
+  * `results.apply_overrides` -- completar el dataset sin pisar lo oficial.
   * `app_data.set_prediction` / `set_confirmation` -- escritura de pronosticos.csv.
   * `liquidar.main` -- cruce por EQUIPOS (no por fecha) y re-liquidacion.
 
@@ -23,8 +23,10 @@ import pandas as pd
 import pytest
 
 import app_data
+import csv_io
 import liquidar
 import predict_match_v2
+import results
 
 
 # --------------------------------------------------------------------------
@@ -259,13 +261,21 @@ def test_set_result_de_partido_desconocido_deja_la_fecha_vacia(project):
 
 
 # --------------------------------------------------------------------------
-# (e) _apply_override: completa lo que falta, no pisa lo oficial
+# (e) results.apply_overrides: completa lo que falta, no pisa lo oficial
 # --------------------------------------------------------------------------
 
+def _results_csv(project):
+    return project.base / "data" / "results.csv"
+
+
 def _results_df(project):
-    res = pd.read_csv(project.base / "data" / "results.csv")
-    res["date"] = pd.to_datetime(res["date"], errors="coerce")
-    return res
+    return csv_io.read(_results_csv(project), csv_io.RESULTS)
+
+
+def _override(project, res=None):
+    """El override tal como lo aplican app_data y el modelo (misma funcion)."""
+    return results.apply_overrides(
+        _results_df(project) if res is None else res, _results_csv(project))
 
 
 def test_apply_override_completa_faltantes_sin_pisar_oficiales(project):
@@ -282,7 +292,7 @@ def test_apply_override_completa_faltantes_sin_pisar_oficiales(project):
          "home_score": 3, "away_score": 2},
     ])
 
-    out = app_data._apply_override(_results_df(project))
+    out = _override(project)
 
     esp = out[out["home_team"] == "Spain"].iloc[0]
     fra = out[out["home_team"] == "France"].iloc[0]
@@ -297,7 +307,7 @@ def test_apply_override_no_deja_columnas_con_sufijo(project):
     project.manual_results([{"home_team": "France", "away_team": "Brazil",
                              "home_score": 3, "away_score": 2}])
 
-    out = app_data._apply_override(_results_df(project))
+    out = _override(project)
 
     assert list(out.columns) == list(project.RESULT_COLS)
     assert len(out) == 1
@@ -307,7 +317,7 @@ def test_apply_override_sin_archivo_devuelve_lo_mismo(project):
     project.results([{"home_team": "Spain", "away_team": "Argentina"}])
     res = _results_df(project)
 
-    out = app_data._apply_override(res)
+    out = _override(project, res)
 
     assert out is res
 
@@ -319,7 +329,7 @@ def test_apply_override_ignora_filas_manuales_incompletas(project):
     project.manual_results([{"home_team": "France", "away_team": "Brazil",
                              "home_score": None, "away_score": None}])
 
-    out = app_data._apply_override(_results_df(project))
+    out = _override(project)
 
     assert len(out) == 1
     assert pd.isna(out.iloc[0]["home_score"])
@@ -333,9 +343,78 @@ def test_apply_override_cruza_por_fecha_ademas_de_equipos(project):
     project.manual_results([{"home_team": "France", "away_team": "Brazil",
                              "date": "2026-07-04", "home_score": 3, "away_score": 2}])
 
-    out = app_data._apply_override(_results_df(project))
+    out = _override(project)
 
     assert pd.isna(out.iloc[0]["home_score"])
+
+
+# --------------------------------------------------------------------------
+# (e2) results.by_teams / score_of: el indice que comparten fixture,
+#      knockout_fixture y liquidar
+# --------------------------------------------------------------------------
+def _idx(filas):
+    return results.by_teams(pd.DataFrame(filas))
+
+
+def test_score_of_encuentra_el_marcador_por_equipos():
+    idx = _idx([{"home_team": "Spain", "away_team": "France", "home_score": 2, "away_score": 1}])
+    assert results.score_of(idx, "Spain", "France") == (2, 1)
+
+
+def test_score_of_no_confunde_el_orden_de_los_equipos():
+    """(local, visitante) es una clave ordenada: Spain-France no es France-Spain,
+    y devolver el marcador dado vuelta invertiria quien gano la llave."""
+    idx = _idx([{"home_team": "Spain", "away_team": "France", "home_score": 2, "away_score": 1}])
+    assert results.score_of(idx, "France", "Spain") is None
+
+
+@pytest.mark.parametrize("home,away", [("Spain", "Brazil"), (None, "France"),
+                                       ("Spain", None), (None, None)])
+def test_score_of_devuelve_none_si_no_hay_cruce(home, away):
+    """Los llamadores le pasan equipos sin definir todo el tiempo: en el bracket
+    la mitad de las llaves todavia no tienen rival."""
+    idx = _idx([{"home_team": "Spain", "away_team": "France", "home_score": 2, "away_score": 1}])
+    assert results.score_of(idx, home, away) is None
+
+
+def test_una_llave_sin_definir_no_matchea_una_fila_con_el_equipo_vacio():
+    """Pandas da por iguales None y NaN al buscar en el indice: sin la guarda,
+    una llave todavia sin rival (home=None) encuentra una fila del dataset a la
+    que le falta el equipo, y el bracket resuelve un ganador inventado."""
+    idx = _idx([
+        {"home_team": None, "away_team": "France", "home_score": 9, "away_score": 0},
+        {"home_team": "Spain", "away_team": "France", "home_score": 2, "away_score": 1},
+    ])
+    assert (None, "France") in idx.index          # la trampa esta puesta
+    assert results.score_of(idx, None, "France") is None
+
+
+def test_by_teams_deja_afuera_los_partidos_sin_jugar():
+    """Un partido del fixture sin marcador no puede figurar como 0-0."""
+    idx = _idx([
+        {"home_team": "Spain", "away_team": "France", "home_score": 2, "away_score": 1},
+        {"home_team": "Mexico", "away_team": "Canada", "home_score": None, "away_score": None},
+    ])
+    assert results.score_of(idx, "Mexico", "Canada") is None
+    assert len(idx) == 1
+
+
+def test_score_of_con_el_cruce_repetido_no_explota():
+    """Si el mismo cruce aparece dos veces `.loc` devuelve un DataFrame y no una
+    fila: `int()` sobre eso revienta. Es la razon de ser del helper."""
+    idx = _idx([
+        {"home_team": "Spain", "away_team": "France", "home_score": 2, "away_score": 1},
+        {"home_team": "Spain", "away_team": "France", "home_score": 3, "away_score": 0},
+    ])
+    assert results.score_of(idx, "Spain", "France") == (2, 1)
+
+
+def test_score_of_devuelve_enteros_de_python():
+    """Van a un dict que la GUI formatea y `liquidar` compara: un Int64 de pandas
+    ahi arrastra dtypes raros y `pd.NA` en vez de valores."""
+    idx = _idx([{"home_team": "Spain", "away_team": "France",
+                 "home_score": 2, "away_score": 1}])
+    assert [type(x) for x in results.score_of(idx, "Spain", "France")] == [int, int]
 
 
 # --------------------------------------------------------------------------

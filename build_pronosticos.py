@@ -10,6 +10,8 @@ La app lo lee para mostrar el recuadro de cada jornada con su explicacion.
 from __future__ import annotations
 
 import json
+import sys
+import traceback
 
 import pandas as pd
 
@@ -82,8 +84,14 @@ def main():
                 "top": top_scores(r["M"]),
             })
             n_ko += 1
-    except Exception as e:
-        print("eliminacion (sugeridos):", e)
+    except Exception:
+        # Se sigue igual: los pronosticos de grupos ya calculados valen aunque el
+        # bracket falle. Pero va el traceback entero y no solo el mensaje: esto
+        # corre desatendido en la tarea programada, y "eliminacion: 'Spain'" no
+        # alcanza para saber que lo rompio cuando se lee el log dias despues.
+        print("eliminacion (sugeridos): FALLO, se sigue con los grupos",
+              file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
 
     with open("pronosticos_detalle.json", "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)

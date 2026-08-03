@@ -107,7 +107,7 @@ a un mercado real durante un Mundial.
 
 ## 🧪 Tests
 
-**1343 tests** (pytest) sobre el modelo y la capa de datos, corriendo en CI para
+**1353 tests** (pytest) sobre el modelo y la capa de datos, corriendo en CI para
 Python 3.11 y 3.13:
 
 ```bash
@@ -197,8 +197,9 @@ scripts de análisis corren en cualquier plataforma.
 | `scoring.py` | reglas de puntaje del prode y la decisión por EV (fuente única) |
 | `teams.py` | padrón único de las 48 selecciones (nombre, castellano, sigla, bandera, grupo) |
 | `csv_io.py` | lectura/escritura tipada de los CSV (dtypes en un solo lugar) |
+| `results.py` | resultados del torneo (dataset + cargados a mano) y búsqueda por cruce |
 | `groups.py` / `bracket.py` | tablas de grupos (desempate FIFA) y llaves M73–M104 |
-| `tests/` | suite pytest (1343 tests) |
+| `tests/` | suite pytest (1353 tests) |
 | `parse_thirds.py` / `thirds_table.json` | tabla oficial de asignación de terceros (495 combos) |
 | `build_horarios.py` / `build_flags.py` / `make_icon.py` | fixture en hora ARG, banderas, ícono |
 

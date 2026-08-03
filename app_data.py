@@ -16,6 +16,7 @@ from pathlib import Path
 import pandas as pd
 
 import csv_io
+import results
 import scoring
 from teams import ABBR, FLAG_ISO, HOSTS  # noqa: F401  (padron unico; se re-exportan)
 
@@ -118,33 +119,24 @@ def match_state(kickoff, now=None, home=None, away=None):
 PRON_COLS = list(csv_io.PRONOSTICOS)      # el esquema manda el orden de columnas
 
 
-def _apply_override(res: pd.DataFrame) -> pd.DataFrame:
-    mp = BASE / "data" / "manual_results.csv"
-    man = csv_io.read(mp, csv_io.MANUAL_RESULTS, missing_ok=True).dropna(
-        subset=["date", "home_team", "away_team", "home_score", "away_score"])
-    if man.empty:
-        return res
-    key = ["date", "home_team", "away_team"]
-    res = res.merge(man[key + ["home_score", "away_score"]], on=key,
-                    how="left", suffixes=("", "_m"))
-    for c in ("home_score", "away_score"):
-        res[c] = res[c].where(res[c].notna(), res[f"{c}_m"])
-    return res.drop(columns=["home_score_m", "away_score_m"])
+def _results_csv():
+    """Ruta del dataset. Se arma en cada llamada porque los tests apuntan BASE
+    a un directorio temporal despues de importar el modulo."""
+    return BASE / "data" / "results.csv"
 
 
 def _pens_index():
     """Penales cargados a mano: {(home, away): (hp, ap)} (solo definiciones por
     penales en eliminacion). Vacio si no hay overrides con penales."""
-    man = csv_io.read(BASE / "data" / "manual_results.csv", csv_io.MANUAL_RESULTS,
-                     missing_ok=True)
+    man = csv_io.read(_results_csv().parent / results.MANUAL_NAME,
+                      csv_io.MANUAL_RESULTS, missing_ok=True)
     con_pens = man.dropna(subset=["home_pens", "away_pens"])
     return {(r["home_team"], r["away_team"]): (int(r["home_pens"]), int(r["away_pens"]))
             for _, r in con_pens.iterrows()}
 
 
 def _load():
-    res = csv_io.read(BASE / "data" / "results.csv", csv_io.RESULTS)
-    res = _apply_override(res)
+    res = results.load(_results_csv())
     hor = csv_io.read(BASE / "fixture_horarios.csv", csv_io.HORARIOS)
     pron = csv_io.read(BASE / "pronosticos.csv", csv_io.PRONOSTICOS, missing_ok=True)
     return res, hor, pron
@@ -183,24 +175,15 @@ def _index_pronosticos(pron):
 def fixture():
     """Partidos de grupos (dicts) ordenados por hora, con resultado, pred y carga."""
     res, hor, pron = _load()
-    wc = wc_matches(res)
-    played = wc.dropna(subset=["home_score", "away_score"])
-    res_idx = played.set_index(["home_team", "away_team"])[["home_score", "away_score"]].sort_index()
-
+    res_idx = results.by_teams(wc_matches(res))
     pred_idx, load_idx = _index_pronosticos(pron)
 
     out = []
     for _, h in hor.sort_values("kickoff_arg").iterrows():
         ht, at = h["home_team"], h["away_team"]
-        real = None
-        if (ht, at) in res_idx.index:
-            rec = res_idx.loc[(ht, at)]
-            if isinstance(rec, pd.DataFrame):
-                rec = rec.iloc[0]
-            real = (int(rec["home_score"]), int(rec["away_score"]))
         out.append({"home": ht, "away": at,
                     "kickoff": h["kickoff_arg"].to_pydatetime(),
-                    "host": ht in HOSTS, "real": real,
+                    "host": ht in HOSTS, "real": results.score_of(res_idx, ht, at),
                     "pred": pred_idx.get((ht, at)),
                     "load": load_idx.get((ht, at), (0, 0))})
     return out
@@ -213,19 +196,8 @@ def knockout_fixture():
     import bracket
     import groups
     res, _, pron = _load()
-    wc = wc_matches(res)
-    res_idx = wc.dropna(subset=["home_score", "away_score"]).set_index(
-        ["home_team", "away_team"])[["home_score", "away_score"]].sort_index()
-
+    res_idx = results.by_teams(wc_matches(res))
     pred_idx, load_idx = _index_pronosticos(pron)
-
-    def real_of(ht, at):
-        if ht and at and (ht, at) in res_idx.index:
-            rec = res_idx.loc[(ht, at)]
-            if isinstance(rec, pd.DataFrame):
-                rec = rec.iloc[0]
-            return (int(rec["home_score"]), int(rec["away_score"]))
-        return None
 
     fx_g = fixture()
     done_groups = set()
@@ -263,7 +235,7 @@ def knockout_fixture():
             ht, at = winners.get(sa), winners.get(sb)
             al = ht or f"Gan. M{sa}"
             bl = at or f"Gan. M{sb}"
-        real = real_of(ht, at)
+        real = results.score_of(res_idx, ht, at)
         pens = pens_idx.get((ht, at)) if ht and at else None
         if real:
             if real[0] != real[1]:
