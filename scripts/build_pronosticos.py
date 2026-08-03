@@ -15,14 +15,15 @@ import traceback
 
 import pandas as pd
 
-import app_data
-import bracket
-import csv_io
-from predict_match_v2 import load_results, fit_iterative
-from elo import compute_elo
-from predict_match_v3 import predict
+from prode import paths
+from prode.data import app_data
+from prode.tournament import bracket
+from prode.data import csv_io
+from prode.model.predict_match_v2 import load_results, fit_iterative
+from prode.model.elo import compute_elo
+from prode.model.predict_match_v3 import predict
 
-from app_data import HOSTS, TOURNAMENT, WC_START
+from prode.data.app_data import HOSTS, TOURNAMENT, WC_START
 
 
 def top_scores(M, n=5):
@@ -40,7 +41,7 @@ def main():
     wc = df[(df["tournament"] == TOURNAMENT) & (df["date"] >= WC_START)]
     played = set(zip(wc["home_team"], wc["away_team"]))
 
-    hor = csv_io.read("fixture_horarios.csv", csv_io.HORARIOS)
+    hor = csv_io.read(paths.HORARIOS_CSV, csv_io.HORARIOS)
 
     out = []
     for _, h in hor.sort_values("kickoff_arg").iterrows():
@@ -94,7 +95,7 @@ def main():
               file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
 
-    with open("pronosticos_detalle.json", "w", encoding="utf-8") as f:
+    with open(paths.PRONOSTICOS_JSON, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
     print(f"pronosticos_detalle.json -> {len(out)} partidos pendientes con explicacion ({n_ko} de eliminacion)")
     for o in out[:4]:

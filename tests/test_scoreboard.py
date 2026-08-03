@@ -18,7 +18,7 @@ from datetime import timedelta
 
 import pytest
 
-import app_data
+from prode.data import app_data
 from conftest import GROUPS_DAY, KO_DAY
 
 # Momentos utiles: "done" para grupos (ventana 120') y para eliminacion (210').

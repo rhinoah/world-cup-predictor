@@ -17,13 +17,14 @@ import argparse
 
 import pandas as pd
 
-import csv_io
-from predict_match_v2 import fit_iterative, load_results, apply_manual_overrides
-from elo import compute_elo
-from predict_match_v3 import predict
+from prode import paths
+from prode.data import csv_io
+from prode.model.predict_match_v2 import fit_iterative, load_results, apply_manual_overrides
+from prode.model.elo import compute_elo
+from prode.model.predict_match_v3 import predict
 
-from app_data import HOSTS
-RAW = "data/results.csv"
+from prode.data.app_data import HOSTS
+RAW = paths.RESULTS_CSV
 
 
 def load_fixture() -> pd.DataFrame:

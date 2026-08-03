@@ -37,13 +37,14 @@ from pathlib import Path
 
 import pandas as pd
 
-import csv_io
+from prode import paths
+from prode.data import csv_io
 
 BASE_URL = "https://raw.githubusercontent.com/martj42/international_results/master"
 FILES = ["results.csv", "goalscorers.csv", "shootouts.csv", "former_names.csv"]
 
-DATA_DIR = Path("data")
-OUTPUT_DIR = Path("output")
+DATA_DIR = paths.DATA
+OUTPUT_DIR = paths.OUTPUT
 
 # Selecciones a destacar en el reporte final. Editar segun los clasificados
 # al Mundial 2026. Los tres anfitriones ya estan dentro; el resto se va

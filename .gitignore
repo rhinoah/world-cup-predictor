@@ -1,4 +1,4 @@
-# --- datos crudos y artefactos regenerables (se bajan/arman con build_features.py y afines) ---
+# --- datos crudos y artefactos regenerables (se arman con `python run.py setup`) ---
 data/
 output/
 flags/

@@ -17,8 +17,8 @@ Uso:
 """
 from __future__ import annotations
 
-from predict_match_v2 import load_results, fit_iterative, score_matrix
-from scoring import points as prode_points, best_ev_score, most_likely_score
+from prode.model.predict_match_v2 import load_results, fit_iterative, score_matrix
+from prode.model.scoring import points as prode_points, best_ev_score, most_likely_score
 
 # torneos finales (no clasificatorias) a evaluar
 TARGET_TOURNAMENTS = ["FIFA World Cup", "UEFA Euro", "Copa América"]

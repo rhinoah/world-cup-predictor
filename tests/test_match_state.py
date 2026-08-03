@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 import pandas as pd
 import pytest
 
-import app_data
+from prode.data import app_data
 from conftest import GROUPS_DAY, KO_DAY, LONG_AGO
 
 

@@ -11,9 +11,10 @@ from __future__ import annotations
 import urllib.request
 from pathlib import Path
 
-from teams import FLAG_ISO   # padron unico (no pasa por app_data: evita cargar pandas)
+from prode import paths
+from prode.tournament.teams import FLAG_ISO   # padron unico (no pasa por app_data: evita cargar pandas)
 
-DEST = Path("flags")
+DEST = paths.FLAGS
 WIDTH = "w40"   # ancho 40px (liviano y nitido a tamano chico)
 
 

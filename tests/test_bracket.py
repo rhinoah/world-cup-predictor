@@ -10,7 +10,7 @@ from datetime import datetime
 
 import pytest
 
-import bracket
+from prode.tournament import bracket
 
 LETTERS = "ABCDEFGHIJKL"
 

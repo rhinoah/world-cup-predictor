@@ -16,24 +16,21 @@ que el propio modelo esperaba sacar. Si matplotlib esta instalado, guarda
 docs/ev_vs_real.png con las curvas acumuladas.
 
 Uso:
-    python backfill_ev.py
+    python -m scripts.backfill_ev
 """
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
 import pandas as pd
 
-BASE = Path(__file__).resolve().parent
-sys.path.insert(0, str(BASE))
-os.chdir(BASE)
+from prode import paths
+from prode.data import csv_io
+from prode.model.predict_match_v2 import load_results, fit_iterative
+from prode.model.elo import compute_elo
+from prode.model.predict_match_v3 import predict
 
-import csv_io
-from predict_match_v2 import load_results, fit_iterative
-from elo import compute_elo
-from predict_match_v3 import predict
+# Antes esto hacia sys.path.insert + os.chdir(BASE) para que anduvieran las rutas
+# relativas de los otros modulos. Con las rutas absolutas de paths.py no hace falta.
+BASE = paths.ROOT
 
 GROUPS_END = pd.Timestamp("2026-06-27")   # ultimo dia de la fase de grupos
 

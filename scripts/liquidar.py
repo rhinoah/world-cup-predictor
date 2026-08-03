@@ -15,13 +15,14 @@ from __future__ import annotations
 
 import pandas as pd
 
-import app_data
-import csv_io
-import results
-import scoring
+from prode import paths
+from prode.data import app_data
+from prode.data import csv_io
+from prode.data import results
+from prode.model import scoring
 
-PRON = "pronosticos.csv"
-RESULTS = "data/results.csv"
+PRON = paths.PRONOSTICOS_CSV
+RESULTS = paths.RESULTS_CSV
 
 
 def prode_points(ph, pa, rh, ra) -> int:

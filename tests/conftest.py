@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import app_data  # noqa: E402
+from prode.data import app_data  # noqa: E402
 
 # Fechas de referencia del Mundial 2026 (para no hardcodearlas en cada test).
 GROUPS_DAY = datetime(2026, 6, 15, 16, 0)    # fase de grupos -> ventana de 120'

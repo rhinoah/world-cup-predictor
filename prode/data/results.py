@@ -24,7 +24,7 @@ from pathlib import Path
 
 import pandas as pd
 
-import csv_io
+from prode.data import csv_io
 
 MANUAL_NAME = "manual_results.csv"
 

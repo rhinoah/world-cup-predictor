@@ -32,8 +32,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import csv_io
-from csv_io import (BOOL, DATE, FINISHED, FLOAT, HORARIOS, INT, MANUAL_RESULTS,
+from prode.data import csv_io
+from prode.data.csv_io import (BOOL, DATE, FINISHED, FLOAT, HORARIOS, INT, MANUAL_RESULTS,
                     PRONOSTICOS, RESULTS, STRICT, TEXT, TIMESTAMP)
 
 TIPOS_CONOCIDOS = {TEXT, INT, FLOAT, BOOL, DATE, TIMESTAMP}

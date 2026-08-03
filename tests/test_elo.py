@@ -9,7 +9,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-import elo
+from prode.model import elo
 
 RESULT_COLS = ["date", "home_team", "away_team", "home_score", "away_score",
                "neutral", "tournament"]

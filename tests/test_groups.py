@@ -13,9 +13,9 @@ from pathlib import Path
 
 import pytest
 
-import app_data
-import groups
-import teams
+from prode.data import app_data
+from prode.tournament import groups
+from prode.tournament import teams
 from conftest import LONG_AGO
 
 FUTURO = datetime(2099, 6, 15, 16, 0)   # nunca "done" contra el reloj real

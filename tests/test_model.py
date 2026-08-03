@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import predict_match_v2 as v2
-import predict_match_v3 as v3
+from prode.model import predict_match_v2 as v2
+from prode.model import predict_match_v3 as v3
 
 
 # --------------------------------------------------------------------------

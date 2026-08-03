@@ -29,9 +29,9 @@ import argparse
 import numpy as np
 import pandas as pd
 
-import scoring
-from predict_match_v2 import load_results, fit_iterative, score_matrix
-from elo import compute_elo, blended_lambdas
+from prode.model import scoring
+from prode.model.predict_match_v2 import load_results, fit_iterative, score_matrix
+from prode.model.elo import compute_elo, blended_lambdas
 
 ELO_WEIGHT = 0.6
 

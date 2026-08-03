@@ -193,13 +193,13 @@ secuencia:
 ```bash
 python run.py --list              # qué hace cada paso y qué produce
 python run.py update              # ciclo diario: dataset → liquidar → jornada → detalle
-python run.py analisis            # backtests + real vs esperado (tarda varios minutos)
+python run.py analisis            # backtests (segundos) + real vs esperado (minutos)
 ```
 
 Suelto, sin pipeline:
 
 ```bash
-python predict_match_v3.py "Spain" "Argentina" --neutral   # un partido puntual
+python -m prode.model.predict_match_v3 "Spain" "Argentina" --neutral   # un partido
 pytest                                                     # la suite de tests
 ```
 
@@ -215,30 +215,49 @@ scripts de análisis corren en cualquier plataforma.
 
 ## 🗂️ Estructura
 
-| Archivo | Qué hace |
-|---|---|
-| `run.py` | el pipeline: `setup` / `update` / `analisis` (única definición del orden) |
-| `Prode.bat` / `update_dataset.bat` / `setup_windows.bat` | lanzar la app / correr el ciclo diario / instalar la automatización |
-| `build_features.py` | descarga el dataset y construye la tabla de features |
-| `elo.py` | rating Elo dinámico + blend de lambdas |
-| `predict_match_v2.py` | el motor: carga de datos, fuerzas ajustadas por rival, matriz de marcadores |
-| `predict_match_v3.py` | **el modelo de producción**: v2 + blend con Elo (w=0.6) |
-| `backtest.py` / `backtest_elo.py` | validación temporal sobre torneos 2016–2024 |
-| `build_pronosticos.py` | corre el v3 sobre los partidos pendientes (grupos + llaves) |
-| `liquidar.py` | cruza pronósticos con resultados y calcula el puntaje |
-| `backfill_ev.py` | recalcula el EV as-of de cada pronóstico (real vs esperado) |
-| `app_data.py` | capa de datos de la app (fixture, scoreboard, overrides, penales) |
-| `prode_app.py` | la app de escritorio (CustomTkinter): ventana principal |
-| `ui_bracket.py` / `ui_tray.py` | ventanas de grupos y llaves / bandeja, bips e instancia única |
-| `theme.py` / `single_instance.py` | paleta y tipografía / lock de una sola ventana |
-| `scoring.py` | reglas de puntaje del prode y la decisión por EV (fuente única) |
-| `teams.py` | padrón único de las 48 selecciones (nombre, castellano, sigla, bandera, grupo) |
-| `csv_io.py` | lectura/escritura tipada de los CSV (dtypes en un solo lugar) |
-| `results.py` | resultados del torneo (dataset + cargados a mano) y búsqueda por cruce |
-| `groups.py` / `bracket.py` | tablas de grupos (desempate FIFA) y llaves M73–M104 |
-| `tests/` | suite pytest (1354 tests) |
-| `parse_thirds.py` / `thirds_table.json` | tabla oficial de asignación de terceros (495 combos) |
-| `build_horarios.py` / `build_flags.py` / `make_icon.py` | fixture en hora ARG, banderas, ícono |
+```
+prode/                  el paquete: nada de acá se ejecuta solo, se importa
+  paths.py              dónde está cada cosa (el único cálculo de rutas)
+  model/                el modelo estadístico
+    scoring.py          reglas del prode y la decisión por EV (fuente única)
+    elo.py              rating Elo dinámico + blend de lambdas
+    predict_match_v2.py el motor: carga, fuerzas ajustadas por rival, matriz de marcadores
+    predict_match_v3.py el modelo de PRODUCCIÓN: v2 + Elo (w=0.6)
+  tournament/           la estructura del Mundial 2026
+    teams.py            padrón único de las 48 selecciones
+    groups.py           tablas de grupos con el desempate FIFA
+    bracket.py          llaves M73–M104 + tabla oficial de mejores terceros
+  data/                 la capa de datos (≠ la carpeta data/ de CSV)
+    csv_io.py           lectura/escritura tipada (los dtypes, en un solo lugar)
+    results.py          resultados del torneo y búsqueda por cruce
+    app_data.py         lo que consume la app: fixture, scoreboard, overrides
+  ui/                   la app de escritorio (CustomTkinter)
+    app.py              la ventana principal
+    bracket_window.py   las ventanas de grupos y de llaves
+    tray.py             bandeja, bips e instancia única
+    theme.py            paleta y tipografía
+    single_instance.py  el lock de una sola ventana
+
+scripts/                lo que se corre, no se importa (`python -m scripts.X`)
+  build_features.py     baja el dataset de martj42 y arma las features
+  build_pronosticos.py  corre el v3 sobre los partidos pendientes
+  liquidar.py           cruza pronósticos con resultados y puntúa
+  backfill_ev.py        recalcula el EV as-of (real vs esperado)
+  backtest.py           validación temporal del modelo de fuerzas
+  backtest_elo.py       ídem para el blend con Elo
+  predict_matchday.py   predice la jornada del día
+  build_horarios.py     fixture en hora argentina
+  build_flags.py        banderas · make_icon.py ícono · parse_thirds.py tabla FIFA
+
+tests/                  la suite pytest (1354 tests)
+run.py                  el pipeline: setup / update / analisis
+prode_app.py            atajo para abrir la app (16 líneas → prode.ui.app)
+*.bat                   lanzar la app · ciclo diario · instalar la automatización
+```
+
+Los scripts se invocan como módulo (`python -m scripts.liquidar`) para que la raíz
+quede en `sys.path`; `run.py` lo hace por vos. Las rutas son absolutas y salen de
+`prode/paths.py`, así que no importa desde qué carpeta se los llame.
 
 ## 📚 Datos y créditos
 

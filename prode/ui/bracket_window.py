@@ -16,11 +16,11 @@ from datetime import datetime
 
 import customtkinter as ctk
 
-import app_data
-import bracket
-import groups
-from teams import abbr, es
-from theme import ACCENT, ACCENT2, BAD, BG, CARD, CARD2, F, GOOD, MID, SUB, TXT, WARN
+from prode.data import app_data
+from prode.tournament import bracket
+from prode.tournament import groups
+from prode.tournament.teams import abbr, es
+from prode.ui.theme import ACCENT, ACCENT2, BAD, BG, CARD, CARD2, F, GOOD, MID, SUB, TXT, WARN
 
 
 class BracketMixin:

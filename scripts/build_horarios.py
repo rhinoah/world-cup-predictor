@@ -18,8 +18,9 @@ import pandas as pd
 
 # Los nombres de worldcuppass se normalizan a los de martj42 con el padron unico
 # (teams.ALIASES): si aparece una fuente nueva, se suma el alias alla, no aca.
-import csv_io
-from teams import canonical as norm
+from prode import paths
+from prode.data import csv_io
+from prode.tournament.teams import canonical as norm
 
 # fecha_ET | home | away | kickoff_ET (24h). Fuente: worldcuppass.com
 RAW = """\
@@ -107,7 +108,7 @@ def main():
         horarios[(H, A)] = dt_arg
         horarios[(A, H)] = dt_arg                      # por si el orden difiere
 
-    res = csv_io.read("data/results.csv", csv_io.RESULTS)
+    res = csv_io.read(paths.RESULTS_CSV, csv_io.RESULTS)
     fx = res[(res["tournament"] == "FIFA World Cup")
              & (res["date"] >= "2026-06-11") & (res["date"] <= "2026-06-27")]
 
@@ -121,7 +122,7 @@ def main():
         rows.append({"home_team": h, "away_team": a, "kickoff_arg": dt})
 
     out = pd.DataFrame(rows).sort_values("kickoff_arg").reset_index(drop=True)
-    csv_io.write(out, "fixture_horarios.csv", csv_io.HORARIOS)
+    csv_io.write(out, paths.HORARIOS_CSV, csv_io.HORARIOS)
     print(f"fixture_horarios.csv -> {len(out)} partidos con horario (hora Argentina)")
     if missing:
         print(f"\nSIN HORARIO ({len(missing)}) -- revisar nombres/alias:")

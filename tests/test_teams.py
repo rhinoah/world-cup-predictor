@@ -22,8 +22,9 @@ from pathlib import Path
 
 import pytest
 
-import teams
-from teams import (ABBR, ALIASES, BY_NAME, ES, FLAG_ISO, GROUPS, HOSTS, TEAMS,
+from prode import paths
+from prode.tournament import teams
+from prode.tournament.teams import (ABBR, ALIASES, BY_NAME, ES, FLAG_ISO, GROUPS, HOSTS, TEAMS,
                    abbr, canonical, es, team_group)
 
 GROUP_KEYS = list("ABCDEFGHIJKL")
@@ -337,8 +338,10 @@ def test_abbr_devuelve_string_vacio_para_vacio_y_none(vacio):
 # (m) modulo hoja: teams.py no puede importar nada del proyecto
 # --------------------------------------------------------------------------
 MODULE_PATH = Path(teams.__file__).resolve()
-REPO = MODULE_PATH.parent
-PROJECT_MODULES = {p.stem for p in REPO.glob("*.py")} - {"teams"}
+# Todos los .py del proyecto, ahora repartidos en paquetes: si teams importara
+# cualquiera de ellos volveria el ciclo.
+PROJECT_MODULES = {p.stem for p in paths.ROOT.rglob("*.py")
+                   if "tests" not in p.parts} - {"teams", "__init__"}
 STDLIB_PERMITIDA = {"__future__", "typing"}
 
 
@@ -371,7 +374,7 @@ def test_teams_solo_importa_la_stdlib_minima():
 
 def test_el_test_de_modulo_hoja_esta_mirando_el_repo_de_verdad():
     """Si PROJECT_MODULES quedara vacio, el test de arriba pasaria siempre."""
-    assert {"app_data", "groups", "prode_app"} <= PROJECT_MODULES
+    assert {"app_data", "groups", "app", "csv_io"} <= PROJECT_MODULES
 
 
 def test_teams_no_deja_la_variable_del_loop_en_el_namespace():
@@ -391,7 +394,7 @@ def test_teams_no_deja_la_variable_del_loop_en_el_namespace():
 # El testigo es `build_horarios.RAW`: el fixture crudo de worldcuppass, 72 lineas
 # "fecha|local|visitante|hora" escritas a mano desde OTRA fuente y que no derivan
 # de teams.py. Se lee del AST para no importar pandas.
-HORARIOS_PATH = REPO / "build_horarios.py"
+HORARIOS_PATH = paths.ROOT / "scripts" / "build_horarios.py"
 
 
 def _fixture_de_grupos() -> list[tuple[str, str]]:

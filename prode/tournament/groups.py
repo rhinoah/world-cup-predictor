@@ -21,7 +21,7 @@ solo sentido: la capa de datos arma los partidos, este modulo los cuenta.
 """
 from __future__ import annotations
 
-from teams import GROUPS, team_group  # noqa: F401  (padron unico; se re-exportan)
+from prode.tournament.teams import GROUPS, team_group  # noqa: F401  (padron unico; se re-exportan)
 
 # GROUPS (12 grupos x 4) y team_group() salen de teams.py, el padron unico de las
 # 48 selecciones; se re-exportan aca porque este es el modulo de la fase de grupos.
@@ -115,7 +115,7 @@ def group_matches(g, fx):
 if __name__ == "__main__":
     # El unico lugar del modulo que toca la capa de datos, y solo al correrlo a
     # mano: importarlo arriba volveria a crear el ciclo que este modulo evita.
-    import app_data
+    from prode.data import app_data
 
     fx = app_data.fixture()
     tb = standings(fx)

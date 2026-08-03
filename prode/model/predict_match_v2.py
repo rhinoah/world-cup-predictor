@@ -41,11 +41,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import csv_io
-import results
-import scoring
+from prode import paths
+from prode.data import csv_io
+from prode.data import results
+from prode.model import scoring
 
-DATA = Path("data/results.csv")
+DATA = paths.RESULTS_CSV         # absoluta: ya no depende de desde donde se corra
 
 HALF_LIFE_YEARS = 3.0
 FRIENDLY_WEIGHT = 0.5

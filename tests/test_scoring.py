@@ -10,12 +10,12 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-import app_data
-import backtest
-import backtest_elo
-import liquidar
-import scoring
-from predict_match_v2 import score_matrix
+from prode.data import app_data
+from scripts import backtest
+from scripts import backtest_elo
+from scripts import liquidar
+from prode.model import scoring
+from prode.model.predict_match_v2 import score_matrix
 
 # ---------------------------------------------------------------- casos base
 # (pred, real, outcome esperado). Cubre exacto (incluido 0-0 y empate),

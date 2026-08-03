@@ -14,6 +14,8 @@ import json
 import re
 import urllib.request
 
+from prode import paths
+
 URL = ("https://en.wikipedia.org/w/api.php?action=parse"
        "&page=Template:2026_FIFA_World_Cup_third-place_table"
        "&prop=wikitext&format=json&formatversion=2")
@@ -36,7 +38,7 @@ def main():
     print("filas parseadas:", len(table))
     print("67  (BDEFIJKL):", table.get("BDEFIJKL"))
     print("494 (ABCDEFGI):", table.get("ABCDEFGI"))
-    with open("thirds_table.json", "w", encoding="utf-8") as f:
+    with open(paths.THIRDS_JSON, "w", encoding="utf-8") as f:
         json.dump(table, f, ensure_ascii=False)
     print("guardado thirds_table.json con", len(table), "combinaciones")
 

@@ -14,7 +14,8 @@ valido (puede diferir de la asignacion oficial exacta, que sale de la tabla de
 """
 from __future__ import annotations
 
-import groups
+from prode import paths
+from prode.tournament import groups
 
 _THIRDS = None
 
@@ -27,7 +28,7 @@ def _thirds_table():
     if _THIRDS is None:
         import json
         from pathlib import Path
-        p = Path(__file__).resolve().parent / "thirds_table.json"
+        p = paths.THIRDS_JSON
         _THIRDS = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
     return _THIRDS
 
@@ -168,7 +169,7 @@ def slot_label(code):
 
 
 if __name__ == "__main__":
-    import app_data          # solo al correrlo a mano: ver la nota en groups.py
+    from prode.data import app_data   # solo al correrlo a mano: ver la nota en groups.py
 
     rows = resolve_r32(groups.standings(app_data.fixture()))
     print(f"Round of 32 proyectado ({sum(1 for m in rows if m['a'] and m['b'])}/16 cruces con equipos):")

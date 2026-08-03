@@ -15,14 +15,15 @@ from pathlib import Path
 
 import pandas as pd
 
-import bracket
-import csv_io
-import groups
-import results
-import scoring
-from teams import ABBR, FLAG_ISO, HOSTS  # noqa: F401  (padron unico; se re-exportan)
+from prode import paths
+from prode.tournament import bracket
+from prode.data import csv_io
+from prode.tournament import groups
+from prode.data import results
+from prode.model import scoring
+from prode.tournament.teams import ABBR, FLAG_ISO, HOSTS  # noqa: F401  (padron unico; se re-exportan)
 
-BASE = Path(__file__).resolve().parent
+BASE = paths.ROOT                # los tests lo apuntan a un tmp; ver paths.py
 # --- constantes del torneo (fuente unica; el resto de los scripts las importan) ---
 # HOSTS/ABBR/FLAG_ISO viven en teams.py (padron unico de las 48 selecciones) y se
 # re-exportan aca por comodidad: app_data es lo que importa la GUI.

@@ -14,8 +14,8 @@ que uno se acordaba. Aca esta el orden real, con lo que produce cada paso.
     python run.py --list    # muestra los pasos sin correr nada
 
 Cada paso corre con el MISMO interprete que ejecuto este archivo (`sys.executable`)
-y desde la raiz del proyecto, asi que las rutas relativas de los scripts valen
-sin importar desde donde se lo llame.
+y como modulo (`-m scripts.X`), asi la raiz del repo queda en sys.path y los
+scripts pueden importar `prode...` sin importar desde donde se llame a run.py.
 """
 from __future__ import annotations
 
@@ -41,37 +41,37 @@ class Paso(NamedTuple):
 # Los tres flujos
 # --------------------------------------------------------------------------
 SETUP = [
-    Paso("build_features.py", "baja el dataset de martj42 y arma las features",
+    Paso("build_features", "baja el dataset de martj42 y arma las features",
          "data/*.csv + output/team_matches.csv, team_features.csv"),
-    Paso("build_horarios.py", "cruza el fixture con los horarios en hora argentina",
+    Paso("build_horarios", "cruza el fixture con los horarios en hora argentina",
          "fixture_horarios.csv"),
-    Paso("parse_thirds.py", "baja la tabla FIFA de mejores terceros (495 combinaciones)",
+    Paso("parse_thirds", "baja la tabla FIFA de mejores terceros (495 combinaciones)",
          "thirds_table.json", opcional=True),
-    Paso("build_flags.py", "baja las banderas de las 48 selecciones",
+    Paso("build_flags", "baja las banderas de las 48 selecciones",
          "flags/*.png", opcional=True),
-    Paso("make_icon.py", "dibuja el icono de la app",
+    Paso("make_icon", "dibuja el icono de la app",
          "prode.ico + prode.png", opcional=True),
 ]
 
 UPDATE = [
-    Paso("build_features.py", "actualiza el dataset con los partidos nuevos",
+    Paso("build_features", "actualiza el dataset con los partidos nuevos",
          "data/*.csv + output/*.csv"),
-    Paso("liquidar.py", "puntua los pronosticos de los partidos ya jugados",
+    Paso("liquidar", "puntua los pronosticos de los partidos ya jugados",
          "pronosticos.csv (columnas actual_* y points)"),
-    Paso("predict_matchday.py", "predice la proxima jornada pendiente",
+    Paso("predict_matchday", "predice la proxima jornada pendiente",
          "predicciones_jornada.txt", stdout_a="predicciones_jornada.txt"),
-    Paso("build_pronosticos.py", "recalcula los sugeridos y su explicacion para la app",
+    Paso("build_pronosticos", "recalcula los sugeridos y su explicacion para la app",
          "pronosticos_detalle.json"),
 ]
 
 ANALISIS = [
-    Paso("backtest.py", "valida el modelo de fuerzas sobre 9 torneos (2016-2024)",
+    Paso("backtest", "valida el modelo de fuerzas sobre 9 torneos (2016-2024)",
          "por pantalla"),
-    Paso("backtest_elo.py", "valida el blend con Elo",
+    Paso("backtest_elo", "valida el blend con Elo",
          "por pantalla"),
     # El unico paso lento del proyecto: re-ajusta el modelo una vez por cada
     # fecha del torneo, asi que son ~100 ajustes. Los backtests tardan segundos.
-    Paso("backfill_ev.py", "recalcula el EV as-of de cada pronostico (varios minutos)",
+    Paso("backfill_ev", "recalcula el EV as-of de cada pronostico (varios minutos)",
          "pronosticos.csv (columna ev_v3) + docs/ev_vs_real.png"),
 ]
 
@@ -83,7 +83,7 @@ def listar(nombre: str, pasos: list[Paso]) -> None:
     print(f"\n{nombre}:")
     for i, p in enumerate(pasos, 1):
         marca = "  (opcional)" if p.opcional else ""
-        print(f"  {i}. {p.script:<22} {p.que_hace}{marca}")
+        print(f"  {i}. {p.script + '.py':<22} {p.que_hace}{marca}")
         print(f"     -> {p.produce}")
 
 
@@ -94,7 +94,9 @@ def correr(pasos: list[Paso]) -> int:
         t0 = time.perf_counter()
         salida = open(BASE / p.stdout_a, "w", encoding="utf-8") if p.stdout_a else None
         try:
-            r = subprocess.run([sys.executable, str(BASE / p.script)],
+            # -m y no la ruta del archivo: asi sys.path[0] es la raiz del repo
+            # y los scripts pueden hacer `from prode... import ...`.
+            r = subprocess.run([sys.executable, "-m", f"scripts.{p.script}"],
                                cwd=str(BASE), stdout=salida)
         finally:
             if salida:

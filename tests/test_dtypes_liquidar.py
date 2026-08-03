@@ -22,11 +22,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import app_data
-import csv_io
-import liquidar
-import predict_match_v2
-import results
+from prode.data import app_data
+from prode.data import csv_io
+from scripts import liquidar
+from prode.model import predict_match_v2
+from prode.data import results
 
 
 # --------------------------------------------------------------------------

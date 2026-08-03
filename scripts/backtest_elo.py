@@ -8,9 +8,9 @@ favorito". Reporta puntos/partido (regla EV) para varios pesos w del Elo.
 """
 from __future__ import annotations
 
-from predict_match_v2 import load_results, fit_iterative, score_matrix
-from elo import compute_elo, blended_lambdas, HFA
-from scoring import points as prode_points, best_ev_score as best_ev
+from prode.model.predict_match_v2 import load_results, fit_iterative, score_matrix
+from prode.model.elo import compute_elo, blended_lambdas, HFA
+from prode.model.scoring import points as prode_points, best_ev_score as best_ev
 
 TARGET = ["FIFA World Cup", "UEFA Euro", "Copa América"]
 MIN_YEAR = 2016

@@ -17,9 +17,10 @@ import threading
 import time
 from pathlib import Path
 
-from theme import ACCENT, BG
+from prode import paths
+from prode.ui.theme import ACCENT, BG
 
-BASE = Path(__file__).resolve().parent
+BASE = paths.ROOT
 
 BEEP_MS = 1500
 
