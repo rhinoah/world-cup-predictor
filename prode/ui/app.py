@@ -23,7 +23,6 @@ import threading
 import time
 import traceback
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import customtkinter as ctk
 
@@ -66,22 +65,22 @@ def log_error(que: str, detalle: str = "") -> None:
 METHOD_TEXT = (
     "¿Cómo se calculan los pronósticos?\n\n"
     "El modelo estima la fuerza de ataque y defensa de cada selección a partir "
-    "de ~49.000 partidos (goles, ajustados por la calidad del rival), combinada "
+    "de ~50.000 partidos (goles, ajustados por la calidad del rival), combinada "
     "con un rating Elo. Con eso arma la probabilidad de CADA marcador posible.\n\n"
     "El marcador sugerido no es siempre el más probable: es el que maximiza el "
     "PUNTAJE ESPERADO del prode. A veces conviene un resultado que combina mejor "
     "acertar el ganador con pegar el marcador exacto.\n\n"
     "Los partidos recientes pesan más y los amistosos la mitad. Se recalcula "
     "todos los días con los resultados nuevos. Validado en Mundiales, Eurocopas "
-    "y Copas América pasadas: ~0,90 puntos por partido, contra ~0,83 de tirar "
-    "siempre 1-0 al favorito."
+    "y Copas América pasadas (2016-2024): 0,91 puntos por partido, contra 0,83 "
+    "de tirar siempre 1-0 al favorito."
 )
 
 
 
 
 def load_detalle():
-    p = BASE / "pronosticos_detalle.json"
+    p = paths.PRONOSTICOS_JSON
     if not p.exists():
         return []
     try:
@@ -128,12 +127,15 @@ class App(BracketMixin, TrayMixin, ctk.CTk):
         self._setup_tray()
         if self._single_srv is not None:
             threading.Thread(target=self._single_listen, daemon=True).start()
+        # tick() tambien lee datos: si falta data/ (un clon recien bajado, antes de
+        # `run.py setup`) reventaba ACA, fuera del try de refresh_data, y con
+        # pythonw el usuario no veia ni ventana ni traceback.
         self.tick()
 
     def _load_flags(self):
         if PILImage is None:
             return
-        fdir = BASE / "flags"
+        fdir = paths.FLAGS
         for team, iso in app_data.FLAG_ISO.items():
             p = fdir / f"{iso}.png"
             if not p.exists():
@@ -146,7 +148,7 @@ class App(BracketMixin, TrayMixin, ctk.CTk):
 
     def _set_window_icon(self):
         try:
-            ico = BASE / "prode.ico"
+            ico = paths.ICO
             if ico.exists():
                 self.iconbitmap(str(ico))
         except Exception:
@@ -424,6 +426,11 @@ class App(BracketMixin, TrayMixin, ctk.CTk):
                 self._last_sig = sig
                 self._update_scores()
                 self._update_columns()
+        except FileNotFoundError as e:
+            # El caso mas comun de todos: un clon recien bajado, antes de correr
+            # el setup. Decirle QUE hacer vale mas que mostrarle la ruta.
+            self.when_lbl.configure(text="faltan los datos — corré:  python run.py setup")
+            log_error(f"refresh_data: falta {e.filename or e}")
         except Exception as e:
             # En pantalla entra el mensaje corto; el traceback va al log, que es
             # lo unico que sirve para saber que dato lo rompio.
@@ -478,8 +485,13 @@ class App(BracketMixin, TrayMixin, ctk.CTk):
         for m in todays:
             self._match_card(self.col_hoy, m, det, today_col=True)
 
-        # aviso en el boton de "jornada anterior" si hay partidos ya pasados sin resultado cargado
-        falta = sum(1 for m in self.fx if app_data.logical_date(m["kickoff"]) < today and m["real"] is None)
+        # Aviso en el boton de "jornada anterior" si hay partidos ya pasados sin
+        # resultado cargado. Sobre `allm` y no `fx`: fx son solo los 72 de grupos,
+        # asi que desde que empezo la eliminacion el aviso no avisaba nada. El
+        # `defined` saltea las llaves sin rival todavia, igual que hace el modal.
+        falta = sum(1 for m in self.allm
+                    if m.get("defined", True)
+                    and app_data.logical_date(m["kickoff"]) < today and m["real"] is None)
         self.prev_btn.configure(
             text=f"📋 jornada anterior  ⚠{falta}" if falta else "📋 jornada anterior",
             text_color=WARN if falta else MID)
@@ -671,10 +683,15 @@ class App(BracketMixin, TrayMixin, ctk.CTk):
     def tick(self):
         now = datetime.now()
         self.clock.configure(text=now.strftime("%A %d/%m · %H:%M:%S").capitalize())
-        if time.time() - self._last_refresh > 300:   # auto-refresh cada 5 min (y solo recrea si cambió)
-            self.refresh_data()
-        self._update_countdown(now)
-        self._check_reminder(now)
+        try:
+            if time.time() - self._last_refresh > 300:   # auto-refresh cada 5 min (y solo recrea si cambió)
+                self.refresh_data()
+            self._update_countdown(now)
+            self._check_reminder(now)
+        except Exception:
+            # El reloj tiene que seguir andando pase lo que pase: si esto se
+            # propaga, muere el bucle de after() y la ventana queda congelada.
+            log_error("tick")
         self.after(1000, self.tick)
 
     def _update_countdown(self, now):

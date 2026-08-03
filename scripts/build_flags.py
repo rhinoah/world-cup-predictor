@@ -9,7 +9,6 @@ Correr una sola vez (idempotente: no re-baja las que ya estan).
 from __future__ import annotations
 
 import urllib.request
-from pathlib import Path
 
 from prode import paths
 from prode.tournament.teams import FLAG_ISO   # padron unico (no pasa por app_data: evita cargar pandas)

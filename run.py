@@ -20,6 +20,7 @@ scripts pueden importar `prode...` sin importar desde donde se llame a run.py.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 import time
@@ -92,7 +93,12 @@ def correr(pasos: list[Paso]) -> int:
     for i, p in enumerate(pasos, 1):
         print(f"\n[{i}/{len(pasos)}] {p.script} — {p.que_hace}", flush=True)
         t0 = time.perf_counter()
-        salida = open(BASE / p.stdout_a, "w", encoding="utf-8") if p.stdout_a else None
+        # A un temporal: abrir el destino en "w" lo truncaba ANTES de lanzar el
+        # subproceso, asi que un paso que fallaba dejaba el archivo en 0 bytes y
+        # se perdia el del dia anterior. Solo se reemplaza si el paso anduvo.
+        destino = BASE / p.stdout_a if p.stdout_a else None
+        tmp = destino.with_suffix(destino.suffix + ".tmp") if destino else None
+        salida = open(tmp, "w", encoding="utf-8") if tmp else None
         try:
             # -m y no la ruta del archivo: asi sys.path[0] es la raiz del repo
             # y los scripts pueden hacer `from prode... import ...`.
@@ -101,6 +107,8 @@ def correr(pasos: list[Paso]) -> int:
         finally:
             if salida:
                 salida.close()
+        if tmp:
+            os.replace(tmp, destino) if r.returncode == 0 else tmp.unlink(missing_ok=True)
         seg = time.perf_counter() - t0
         if r.returncode == 0:
             print(f"      ok ({seg:.1f} s) -> {p.produce}", flush=True)

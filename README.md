@@ -54,17 +54,42 @@ fila `TOTAL` de `backtest.py` (columna `EV` → v2) y la de `backtest_elo.py`
 
 > **Lectura honesta: el modelo de fuerzas solo no le gana al baseline tonto.**
 > Contra el baseline que imprime su propio script — el favorito por goles
-> esperados — v2 **pierde**: 0.827 contra 0.835. El Elo es el que despega, y por
+> esperados — v2 **pierde**: 0.827 contra 0.835. El blend es el que despega, y por
 > eso existe v3. `predict_match_v2.py` no quedó como reliquia: es el motor (carga
 > de datos, ajuste de fuerzas, matriz de marcadores) que v3 importa; v3 sólo
 > agrega el blend, y son 13 líneas.
+
+### Qué aporta el Elo (no lo que yo creía)
+
+La explicación que tenía escrita acá era que el Elo "discrimina mejor al
+favorito". Al ir a medirlo, resultó **falso**: sobre los 399 partidos del
+backtest, el favorito por fuerzas y el favorito por Elo aciertan la dirección
+*exactamente* igual (219/399 los dos), coinciden en 354 y empatan 13 a 13 en los
+45 en que discrepan.
+
+Lo que el Elo aporta es la **escala**. `blended_lambdas` ancla los goles totales
+en 2.60 repartidos por supremacía, y eso corrige un sesgo del modelo de fuerzas:
+
+| | goles totales esperados | marcadores exactos |
+|---|---|---|
+| reales | 2.49 | — |
+| sólo fuerzas (w=0) | 2.33 · sd 0.38 | 57 |
+| **blend (w=0.6)** | **2.47** · sd 0.16 | **69** |
+
+El modelo de fuerzas subestimaba cuántos goles se hacen. El Elo lo recentra y le
+baja la varianza, y eso son **+21% de marcadores exactos** — que es justo lo que
+el prode paga triple. El salto de 0.827 a 0.912 sale de ahí, no de acertar mejor
+quién gana.
 
 Piezas clave:
 
 - **Poisson bivariado con corrección Dixon-Coles** (ρ=−0.10) para la matriz de
   probabilidad de cada marcador.
-- **Elo dinámico** propio: discrimina al favorito mejor que las fuerzas solas —
-  es el componente que despega del baseline.
+- **Elo dinámico** propio, mezclado con las fuerzas. Lo interesante es *qué*
+  aporta, porque no es lo que parecía: **no elige mejor al favorito**. Sobre los
+  399 partidos del backtest, el favorito por fuerzas y el favorito por Elo
+  aciertan la dirección idéntico (219/399 los dos) y eligen al mismo en 354.
+  Lo que aporta es la **escala de goles** — ver abajo.
 - **Regla de decisión por EV**: no se carga el marcador *más probable*, sino el
   que **maximiza el puntaje esperado del prode**: `EV = 2·P(exacto) + P(dirección)`.
   Solo hay 3 candidatos (el modal de cada dirección 1X2).
@@ -126,8 +151,8 @@ a un mercado real durante un Mundial.
 
 ## 🧪 Tests
 
-**1354 tests** (pytest) sobre el modelo y la capa de datos, corriendo en CI para
-Python 3.11 y 3.13:
+**395 tests** (1354 casos con la parametrización) sobre el modelo y la capa de
+datos, corriendo en CI para Python 3.11 y 3.13:
 
 ```bash
 pip install -r requirements-dev.txt
@@ -249,7 +274,7 @@ scripts/                lo que se corre, no se importa (`python -m scripts.X`)
   build_horarios.py     fixture en hora argentina
   build_flags.py        banderas · make_icon.py ícono · parse_thirds.py tabla FIFA
 
-tests/                  la suite pytest (1354 tests)
+tests/                  la suite pytest (395 tests, 1354 casos)
 run.py                  el pipeline: setup / update / analisis
 prode_app.py            atajo para abrir la app (16 líneas → prode.ui.app)
 *.bat                   lanzar la app · ciclo diario · instalar la automatización
@@ -285,7 +310,8 @@ Los CSV de datos y los pronósticos personales **no se versionan** (ver
 - De la auditoría interna post-torneo ya salieron la regla de puntaje unificada
   (`scoring.py`), el padrón único de selecciones (`teams.py`), el loader de CSV
   tipado (`csv_io.py`), la separación de la GUI en módulos y la suite de tests.
-  Queda reestructurar el repo en carpetas y sumar capturas de la app.
+  el repo reestructurado en paquetes y el pipeline en `run.py`. Queda sumar
+  capturas de la app.
 - **Visión v2**: generalizar a un framework multi-deporte/multi-competencia —
   fuentes de datos intercambiables (con modo manual-first), formatos de torneo
   configurables (partido único / llaves / liga) y predictor pluggable por deporte.

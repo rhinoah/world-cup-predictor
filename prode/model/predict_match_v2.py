@@ -28,15 +28,14 @@ de su propio baseline "1-0 al favorito" (0.835). Las fuerzas de goles solas no
 le ganan al baseline tonto; el salto lo da el Elo, y por eso existe el v3.
 
 Uso (para ver las fuerzas sin el Elo encima, o comparar contra v3):
-    python predict_match_v2.py "Mexico" "South Africa"
-    python predict_match_v2.py "Argentina" "Brazil" --neutral
-    python predict_match_v2.py "Mexico" "South Africa" --as-of 2010-06-11
+    python -m prode.model.predict_match_v2 "Mexico" "South Africa"
+    python -m prode.model.predict_match_v2 "Argentina" "Brazil" --neutral
+    python -m prode.model.predict_match_v2 "Mexico" "South Africa" --as-of 2010-06-11
 """
 from __future__ import annotations
 
 import argparse
 import math
-from pathlib import Path
 
 import numpy as np
 import pandas as pd

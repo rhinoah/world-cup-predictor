@@ -1,7 +1,9 @@
 # --- datos crudos y artefactos regenerables (se arman con `python run.py setup`) ---
-data/
-output/
-flags/
+# Anclados con / a la raiz: sin la barra, `data/` tambien se comia prode/data/,
+# que es un PAQUETE del codigo (su __init__.py quedo fuera del repo publicado).
+/data/
+/output/
+/flags/
 __pycache__/
 *.pyc
 

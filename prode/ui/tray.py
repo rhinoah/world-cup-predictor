@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import threading
 import time
-from pathlib import Path
 
 from prode import paths
 from prode.ui.theme import ACCENT, BG
@@ -69,7 +68,7 @@ class TrayMixin:
     # ---------------- tray ----------------
     def _tray_image(self):
         try:
-            p = BASE / "prode.png"
+            p = paths.PNG
             if p.exists() and PILImage is not None:
                 return PILImage.open(p).resize((64, 64))
         except Exception:

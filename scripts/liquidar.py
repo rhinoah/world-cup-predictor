@@ -9,7 +9,7 @@ los puntos del prode (3/1/0). Reescribe el CSV solo si liquido algo nuevo, y
 muestra el acumulado y como venimos contra el puntaje esperado (EV) del modelo.
 
 Uso:
-    python liquidar.py
+    python -m scripts.liquidar
 """
 from __future__ import annotations
 
@@ -31,7 +31,13 @@ def prode_points(ph, pa, rh, ra) -> int:
 
 
 def main():
-    pron = csv_io.read(PRON, csv_io.PRONOSTICOS)
+    # missing_ok: en un clon recien bajado todavia no hay pronosticos cargados, y
+    # este script lo corre la tarea diaria. Sin esto fallaba todos los dias hasta
+    # que el usuario cargara el primero a mano.
+    pron = csv_io.read(PRON, csv_io.PRONOSTICOS, missing_ok=True)
+    if pron.empty:
+        print("Todavia no hay pronosticos cargados: nada que liquidar.")
+        return
 
     # Cruzar por EQUIPOS dentro del Mundial 2026, no por fecha exacta: la fecha del pronostico de
     # eliminacion a veces difiere 1 dia de la del dataset (zona horaria) y dejaba partidos jugados

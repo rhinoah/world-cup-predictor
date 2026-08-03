@@ -28,15 +28,14 @@ from prode.model.predict_match_v2 import load_results, fit_iterative
 from prode.model.elo import compute_elo
 from prode.model.predict_match_v3 import predict
 
-# Antes esto hacia sys.path.insert + os.chdir(BASE) para que anduvieran las rutas
-# relativas de los otros modulos. Con las rutas absolutas de paths.py no hace falta.
-BASE = paths.ROOT
-
 GROUPS_END = pd.Timestamp("2026-06-27")   # ultimo dia de la fase de grupos
 
 
 def main():
-    pron = csv_io.read(BASE / "pronosticos.csv", csv_io.PRONOSTICOS)
+    pron = csv_io.read(paths.PRONOSTICOS_CSV, csv_io.PRONOSTICOS, missing_ok=True)
+    if pron.empty:
+        print("Todavia no hay pronosticos cargados: nada que recalcular.")
+        return
     if pron["date"].isna().any():
         bad = pron[pron["date"].isna()][["home_team", "away_team"]].values.tolist()
         raise SystemExit(f"Hay filas sin fecha; completalas antes de correr: {bad}")
@@ -71,7 +70,7 @@ def main():
         print(f"[{n:>2}/{len(dates)}] {as_of.date()}  ok ({len(day)} partidos)", flush=True)
 
     # persistir ev_v3 (el esquema se encarga de no degradar el formato)
-    csv_io.write(pron, BASE / "pronosticos.csv", csv_io.PRONOSTICOS)
+    csv_io.write(pron, paths.PRONOSTICOS_CSV, csv_io.PRONOSTICOS)
     print(f"\npronosticos.csv actualizado ({len(rows)} filas con ev_v3)", flush=True)
 
     # ---------------- reporte real vs esperado ----------------
@@ -111,7 +110,7 @@ def main():
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         d2 = done.sort_values("date").reset_index(drop=True)
-        (BASE / "docs").mkdir(exist_ok=True)
+        paths.DOCS.mkdir(exist_ok=True)
         fig, ax = plt.subplots(figsize=(9, 4.5))
         ax.plot(d2.index + 1, d2["points"].cumsum(), lw=2,
                 label=f"puntos reales ({tot})")
@@ -123,7 +122,7 @@ def main():
         ax.legend()
         ax.grid(alpha=0.3)
         fig.tight_layout()
-        fig.savefig(BASE / "docs" / "ev_vs_real.png", dpi=150)
+        fig.savefig(paths.DOCS / "ev_vs_real.png", dpi=150)
         print("\ngrafico -> docs/ev_vs_real.png")
     except ImportError:
         print("\n(matplotlib no instalado: salteo el grafico)")

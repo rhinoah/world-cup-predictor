@@ -8,8 +8,8 @@ modelo de produccion v3. Marca la localia sola: solo USA/Mexico/Canada juegan
 de local en su Mundial; el resto es cancha neutral.
 
 Uso:
-    python predict_matchday.py                 # proxima fecha con partidos sin jugar
-    python predict_matchday.py --date 2026-06-12
+    python -m scripts.predict_matchday                 # proxima fecha con partidos sin jugar
+    python -m scripts.predict_matchday --date 2026-06-12
 """
 from __future__ import annotations
 

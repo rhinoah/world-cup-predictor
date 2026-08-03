@@ -13,7 +13,7 @@ Compara, en puntos promedio por partido:
   - 1-1     : baseline "siempre empate 1-1"
 
 Uso:
-    python backtest.py
+    python -m scripts.backtest
 """
 from __future__ import annotations
 

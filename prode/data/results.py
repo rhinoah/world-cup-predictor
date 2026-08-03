@@ -49,6 +49,10 @@ def apply_overrides(df: pd.DataFrame, results_csv) -> pd.DataFrame:
     man = man.dropna(subset=_KEY + _SCORES)
     if man.empty:
         return df
+    # Sin esto el merge es 1-a-N y un cruce repetido en el override DUPLICA el
+    # partido en el dataset: el Elo lo aplicaria dos veces y score_of elegiria
+    # uno de los dos marcadores al azar. Gana el ultimo, que es el mas reciente.
+    man = man.drop_duplicates(subset=_KEY, keep="last")
     df = df.merge(man[_KEY + _SCORES], on=_KEY, how="left", suffixes=("", "_m"))
     for c in _SCORES:
         df[c] = df[c].where(df[c].notna(), df[f"{c}_m"])
@@ -69,7 +73,11 @@ def score_of(idx: pd.DataFrame, home, away):
 
     El `isinstance` no es paranoia: si el mismo cruce aparece repetido, `.loc`
     devuelve un DataFrame en vez de una fila y `int()` explotaria."""
-    if not home or not away or (home, away) not in idx.index:
+    # pd.isna antes que el `not`: `not pd.NA` levanta "boolean value of NA is
+    # ambiguous", y un equipo vacio en un CSV llega justamente como pd.NA.
+    if home is None or away is None or pd.isna(home) or pd.isna(away):
+        return None
+    if (home, away) not in idx.index:
         return None
     rec = idx.loc[(home, away)]
     if isinstance(rec, pd.DataFrame):

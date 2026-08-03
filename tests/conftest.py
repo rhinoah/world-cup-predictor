@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from prode.data import app_data  # noqa: E402
+from prode.tournament import bracket  # noqa: E402
 
 # Fechas de referencia del Mundial 2026 (para no hardcodearlas en cada test).
 GROUPS_DAY = datetime(2026, 6, 15, 16, 0)    # fase de grupos -> ventana de 120'
@@ -28,11 +29,17 @@ LONG_AGO = datetime(2000, 1, 1, 12, 0)       # siempre "done" contra el reloj re
 
 
 @pytest.fixture(autouse=True)
-def _clean_finished_cache():
-    """`_finished_set()` cachea en un global; sin esto los tests se contaminan."""
+def _clean_module_caches():
+    """Los modulos cachean en globals; sin esto los tests se contaminan entre si.
+
+    `bracket._THIRDS` ademas se lee de la RAIZ del repo y no del tmp de la
+    fixture `project`: es dato versionado (la tabla oficial de FIFA), asi que
+    esta bien que no dependa del sandbox, pero el cache si tiene que limpiarse."""
     app_data._FINISHED = None
+    bracket._THIRDS = None
     yield
     app_data._FINISHED = None
+    bracket._THIRDS = None
 
 
 class FakeProject:
@@ -105,13 +112,13 @@ def _match(home="Spain", away="Argentina", kickoff=None, real=None, pred=None,
            load=(1, 1), **extra):
     """Dict de partido con la forma que devuelven fixture()/knockout_fixture().
 
-    `state` se calcula contra el reloj como en produccion, pero SIN pasar los
-    equipos: asi `match_state` no consulta data/finished.csv y estos partidos
-    de juguete no dependen de los datos reales del repo. Se puede pisar pasando
-    `state=...` explicitamente."""
+    `state` se calcula igual que en produccion, CON los equipos, para que un
+    partido marcado en finished.csv de "done" tambien aca. Los tests que no usan
+    la fixture `project` no se ven afectados: sin CSV, el override esta vacio.
+    Se puede pisar pasando `state=...` explicitamente."""
     ko = kickoff or GROUPS_DAY
     m = {"home": home, "away": away, "kickoff": ko,
-         "state": app_data.match_state(ko),
+         "state": app_data.match_state(ko, home=home, away=away),
          "real": real, "pred": pred, "load": load, "host": False}
     m.update(extra)
     return m

@@ -16,9 +16,9 @@ Archivos que usa:
     former_names.csv  -> mapeo de nombres historicos de selecciones
 
 Uso:
-    python build_features.py                  # baja datos + genera features
-    python build_features.py --since 2018     # ventana de relevancia distinta
-    python build_features.py --no-download     # usa el cache local en ./data
+    python -m scripts.build_features                  # baja datos + genera features
+    python -m scripts.build_features --since 2018     # ventana de relevancia distinta
+    python -m scripts.build_features --no-download     # usa el cache local en ./data
 
 Salida:
     data/*.csv                 -> CSV crudos descargados
@@ -31,9 +31,9 @@ Dependencias: pandas  (pip install pandas)
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import urllib.request
-from pathlib import Path
 
 import pandas as pd
 
@@ -65,9 +65,16 @@ def download_data(force: bool = True) -> None:
             continue
         url = f"{BASE_URL}/{fname}"
         print(f"  bajando: {url}")
+        # A un temporal y recien despues os.replace: `urlretrieve` escribe
+        # directo sobre el destino, asi que una descarga cortada dejaba
+        # results.csv truncado. Y truncado no falla: se lee sin error, con menos
+        # filas, y el Mundial entero desaparece del tablero sin que nada avise.
+        tmp = dest.with_suffix(dest.suffix + ".tmp")
         try:
-            urllib.request.urlretrieve(url, dest)
+            urllib.request.urlretrieve(url, tmp)
+            os.replace(tmp, dest)
         except Exception as exc:  # noqa: BLE001
+            tmp.unlink(missing_ok=True)
             print(f"  ERROR bajando {fname}: {exc}", file=sys.stderr)
             sys.exit(1)
 

@@ -27,13 +27,19 @@ FLAGS = ROOT / "flags"                     # PNG de banderas (no versionados)
 DOCS = ROOT / "docs"
 
 RESULTS_CSV = DATA / "results.csv"         # el dataset de martj42
-MANUAL_RESULTS_CSV = DATA / "manual_results.csv"
-FINISHED_CSV = DATA / "finished.csv"
-
 HORARIOS_CSV = ROOT / "fixture_horarios.csv"
 THIRDS_JSON = ROOT / "thirds_table.json"
 
 PRONOSTICOS_CSV = ROOT / "pronosticos.csv"          # datos personales, no versionados
 PRONOSTICOS_JSON = ROOT / "pronosticos_detalle.json"
-PRODES_JSON = ROOT / "prodes.json"
 ERROR_LOG = ROOT / "prode_error.log"
+
+ICO = ROOT / "prode.ico"
+PNG = ROOT / "prode.png"
+
+# A PROPOSITO no hay constantes para manual_results.csv, finished.csv ni
+# prodes.json: los tres los lee `app_data`, que los arma colgando de su propio
+# `app_data.BASE` porque los tests lo apuntan a un directorio temporal. Una
+# constante de aca se saltearia ese monkeypatch y la suite leeria (y escribiria)
+# los datos reales del usuario. Si aparece un consumidor fuera de app_data, la
+# constante se agrega; hasta entonces seria una trampa.

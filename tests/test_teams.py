@@ -18,6 +18,7 @@ para los tests que tocan disco).
 from __future__ import annotations
 
 import ast
+import unicodedata
 from pathlib import Path
 
 import pytest
@@ -426,6 +427,86 @@ def test_los_equipos_del_fixture_son_exactamente_los_del_padron():
     sobran = del_fixture - set(BY_NAME)
     assert not faltan, f"en el padron pero no juegan: {sorted(faltan)}"
     assert not sobran, f"juegan pero no estan en el padron: {sorted(sobran)}"
+
+
+def _sin_acento(s):
+    return "".join(c for c in unicodedata.normalize("NFD", s)
+                   if unicodedata.category(c) != "Mn").lower().replace(" ", "")
+
+
+def _es_subsecuencia(letras, fuente):
+    i = 0
+    for c in letras:
+        i = fuente.find(c, i) + 1
+        if i == 0:
+            return False
+    return True
+
+
+# Codigos que NO salen del nombre en castellano ni en ingles porque vienen del
+# endonimo o del nombre largo del pais. Estan enumerados para que agregar uno
+# nuevo sea una decision consciente y no un typo que pasa de largo.
+ISO_DEL_ENDONIMO = {
+    "South Africa": "za",     # Zuid-Afrika        Ivory Coast: CIV = Cote d'Ivoire
+    "Switzerland": "ch",      # Confoederatio Helvetica
+    "Germany": "de",          # Deutschland
+    "Croatia": "hr",          # Hrvatska
+    "Algeria": "dz",          # Dzayer
+    "Curaçao": "cw",          # Curacao en neerlandes
+    "DR Congo": "cd",         # Congo Democratique
+}
+ABBR_DEL_NOMBRE_LARGO = {
+    "South Africa": "RSA",    # Republic of South Africa
+    "Ivory Coast": "CIV",     # Cote d'Ivoire
+    "Saudi Arabia": "KSA",    # Kingdom of Saudi Arabia
+    "Curaçao": "CUW",
+    "DR Congo": "COD",
+}
+
+
+@pytest.mark.parametrize("t", TEAMS, ids=IDS)
+def test_la_sigla_se_parece_al_nombre_del_equipo(t):
+    """El testigo externo cubre el NOMBRE y el GRUPO, pero no la sigla: cambiar
+    'URU' por 'UGA' pasaba en verde y el bracket dibujaba UGA para Uruguay.
+
+    Es un chequeo de plausibilidad, no una prueba: pide que las 3 letras aparezcan
+    EN ORDEN en el nombre o en el castellano. Ataja el copy-paste de la fila de al
+    lado, que es como se rompe esto en la practica."""
+    if t.name in ABBR_DEL_NOMBRE_LARGO:
+        assert t.abbr == ABBR_DEL_NOMBRE_LARGO[t.name]
+        return
+    assert any(_es_subsecuencia(t.abbr.lower(), _sin_acento(x)) for x in (t.name, t.es)), \
+        f"{t.name}: la sigla {t.abbr!r} no se parece al nombre"
+
+
+@pytest.mark.parametrize("t", TEAMS, ids=IDS)
+def test_el_iso_de_bandera_se_parece_al_nombre_del_equipo(t):
+    """Mismo chequeo para la bandera, con la misma limitacion."""
+    if t.name in ISO_DEL_ENDONIMO:
+        assert t.iso == ISO_DEL_ENDONIMO[t.name]
+        return
+    code = t.iso.split("-")[-1]          # gb-sct -> sct
+    assert any(_es_subsecuencia(code, _sin_acento(x)) for x in (t.name, t.es)), \
+        f"{t.name}: el iso {t.iso!r} no se parece al nombre"
+
+
+def test_los_iso_coinciden_con_las_banderas_ya_descargadas():
+    """El unico testigo REALMENTE externo para el iso: los PNG que bajo
+    build_flags.py de flagcdn. Si alguien edita el padron y cambia un codigo, la
+    bandera vieja queda huerfana y la nueva no existe.
+
+    Se saltea si no estan descargadas (un clon recien bajado, o CI): el chequeo
+    solo tiene sentido contra una descarga previa, que es cuando puede haber
+    divergido."""
+    from prode import paths
+    if not paths.FLAGS.is_dir():
+        pytest.skip("flags/ no esta descargada (corré python run.py setup)")
+    bajadas = {p.stem for p in paths.FLAGS.glob("*.png")}
+    if len(bajadas) < 48:
+        pytest.skip(f"descarga incompleta: {len(bajadas)}/48 banderas")
+
+    faltan = {t.iso for t in TEAMS} - bajadas
+    assert not faltan, f"el padron pide banderas que no se bajaron: {sorted(faltan)}"
 
 
 def test_los_grupos_coinciden_con_quien_juega_contra_quien():

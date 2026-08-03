@@ -74,8 +74,11 @@ class BracketMixin:
             pf.pack(fill="x", padx=6, pady=1)
             pf.grid_columnconfigure(0, weight=1, uniform="m")
             pf.grid_columnconfigure(2, weight=1, uniform="m")
-            state = app_data.match_state(m["kickoff"])
-            if m["real"] is not None and state == "done":
+            # El estado que ya trae el partido, no uno recalculado: al recalcularlo
+            # sin los equipos se perdia el override de finished.csv, y un partido
+            # marcado a mano como terminado ya sumaba en la tabla de posiciones de
+            # esta misma ventana pero se dibujaba en gris.
+            if m["real"] is not None and m["state"] == "done":
                 color = {"exact": GOOD, "dir": MID, "miss": BAD}.get(app_data.outcome_type(m["pred"], m["real"]), TXT)
                 mid = f" {m['real'][0]}-{m['real'][1]} "
             elif m["real"] is not None:

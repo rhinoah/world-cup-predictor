@@ -10,23 +10,35 @@ Lo unico que agrega este archivo es ese blend: son 13 lineas.
 
 POR QUE EXISTE: las fuerzas de goles solas no le ganan al baseline tonto. Sobre
 los mismos 9 torneos (2016-2024), "1-0 al favorito" saca 0.835 y el modelo de
-fuerzas 0.827 -- pierde. El Elo discrimina mucho mejor quien es favorito, y es
-el componente que despega: 0.912 con w=0.6 (`backtest_elo.py`). En el Mundial
-2026, completamente out-of-sample, rindio 0.88.
+fuerzas 0.827 -- pierde. El blend saca 0.912 (`backtest_elo.py`, w=0.6), y en el
+Mundial 2026, out-of-sample, rindio 0.88.
+
+QUE APORTA EL ELO, MEDIDO: no es elegir mejor al favorito. Sobre esos 399
+partidos, el favorito por fuerzas y el favorito por Elo aciertan la direccion
+EXACTAMENTE igual (219/399 los dos), eligen al mismo en 354 y empatan 13 a 13 en
+los 45 que discrepan. Lo que aporta es la ESCALA: `blended_lambdas` ancla los
+goles totales en TOTAL_GOALS=2.60 repartidos por supremacia, y eso corrige un
+sesgo del modelo de fuerzas, que los subestimaba.
+
+    goles totales reales      media 2.49
+    solo fuerzas (w=0)        media 2.33   sd 0.38   -> 57 marcadores exactos
+    blend con Elo (w=0.6)     media 2.47   sd 0.16   -> 69 marcadores exactos
+
+O sea: el Elo no mejora QUIEN gana sino CUANTOS goles, y como el prode paga
+triple el marcador exacto, ahi esta el salto de 0.827 a 0.912.
 
 Quien lo corre: build_pronosticos.py (los sugeridos de la app),
 predict_matchday.py (la jornada del dia) y backfill_ev.py (el EV as-of).
 
 Uso:
-    python predict_match_v3.py "Mexico" "South Africa"
-    python predict_match_v3.py "South Korea" "Czech Republic" --neutral
-    python predict_match_v3.py "Mexico" "South Africa" --as-of 2026-06-11
+    python -m prode.model.predict_match_v3 "Mexico" "South Africa"
+    python -m prode.model.predict_match_v3 "South Korea" "Czech Republic" --neutral
+    python -m prode.model.predict_match_v3 "Mexico" "South Africa" --as-of 2026-06-11
 """
 from __future__ import annotations
 
 import argparse
 
-import numpy as np
 import pandas as pd
 
 from prode.model import scoring

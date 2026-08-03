@@ -10,8 +10,8 @@ Rutas absolutas: se puede correr desde cualquier lado.
 """
 from __future__ import annotations
 
+import sys
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import pandas as pd
 
@@ -37,18 +37,42 @@ def wc_matches(res):
 # Los prodes en los que se participa: nombre, etiqueta corta para la UI y puntaje
 # (exacto, direccion). Personalizable SIN tocar codigo via prodes.json (no versionado):
 #   {"prodes": [{"name": "Mi prode", "short": "Prode", "exact": 3, "dir": 1}, ...]}
+#
+# TIENEN QUE SER EXACTAMENTE DOS, Y EL ORDEN IMPORTA: el primero se corresponde
+# con la columna `load_gel` de pronosticos.csv y el segundo con `load_meli`. Esa
+# atadura es lo unico que no se generalizo -- invertir el orden aca le daria los
+# puntos al prode equivocado sin ningun error. `_load_prodes` lo valida.
 _DEFAULT_PRODES = [
     {"name": "Prode A", "short": "A", "exact": 3, "dir": 1},
     {"name": "Prode B", "short": "B", "exact": 6, "dir": 3},
 ]
+_CAMPOS_PRODE = ("name", "short", "exact", "dir")
 
 
 def _load_prodes():
+    """Los dos prodes, de prodes.json si existe y es valido; si no, los default.
+
+    Se valida en vez de confiar: con tres entradas el tablero reventaba con un
+    `IndexError: tuple index out of range` (las columnas de carga son dos), con
+    una la app no abria, y con `dir: 0` el calculo del EV dividia por cero."""
     import json
     pj = BASE / "prodes.json"
+    if not pj.exists():
+        return _DEFAULT_PRODES
     try:
-        return json.loads(pj.read_text(encoding="utf-8"))["prodes"] if pj.exists() else _DEFAULT_PRODES
-    except Exception:
+        cfg = json.loads(pj.read_text(encoding="utf-8"))["prodes"]
+        if len(cfg) != 2:
+            raise ValueError(f"tienen que ser 2 prodes, hay {len(cfg)}")
+        for p in cfg:
+            faltan = [c for c in _CAMPOS_PRODE if c not in p]
+            if faltan:
+                raise ValueError(f"a {p.get('name', '?')} le faltan {faltan}")
+            if not p["dir"]:
+                raise ValueError(f"{p['name']}: 'dir' no puede ser 0")
+        return cfg
+    except Exception as e:
+        print(f"prodes.json invalido ({e}); se usan los prodes por defecto",
+              file=sys.stderr)
         return _DEFAULT_PRODES
 
 
@@ -169,7 +193,9 @@ def _index_pronosticos(pron):
     pred_idx, load_idx = {}, {}
     for _, r in pron.iterrows():
         clave = (r["home_team"], r["away_team"])
-        if pd.notna(r["pred_home"]):
+        # Los DOS: media carga (pred_home si, pred_away vacio) hacia int(pd.NA)
+        # y volteaba la app entera con un TypeError que no decia que fila era.
+        if pd.notna(r["pred_home"]) and pd.notna(r["pred_away"]):
             pred_idx[clave] = (int(r["pred_home"]), int(r["pred_away"]))
         load_idx[clave] = (_int_or0(r["load_gel"]), _int_or0(r["load_meli"]))
     return pred_idx, load_idx
@@ -256,13 +282,13 @@ def knockout_fixture():
 
 def next_match(now=None, fx=None):
     now = now or datetime.now()
-    fx = fx or fixture()
+    fx = fixture() if fx is None else fx   # [] es una respuesta valida, no 'no me pasaron nada'
     upcoming = sorted((m for m in fx if m["kickoff"] > now), key=lambda m: m["kickoff"])
     return upcoming[0] if upcoming else None
 
 
 def first_match_on(day, fx=None):
-    fx = fx or fixture()
+    fx = fixture() if fx is None else fx   # [] es una respuesta valida, no 'no me pasaron nada'
     todays = [m for m in fx if logical_date(m["kickoff"]) == day]
     return min(todays, key=lambda m: m["kickoff"]) if todays else None
 
@@ -295,7 +321,7 @@ def scoreboard(fx=None, now=None):
     Devuelve por prode los sub-totales por etapa ('grupos'/'elim') y ademas el
     total combinado; la UI decide si muestra las tablas separadas (primer prode)
     o la tabla continua (segundo)."""
-    fx = fx or fixture()
+    fx = fixture() if fx is None else fx   # [] es una respuesta valida, no 'no me pasaron nada'
     now = now or datetime.now()
     board = {}
     for li, (name, (pe, pdir)) in enumerate(PRODES.items()):   # li: indice del prode en m["load"]

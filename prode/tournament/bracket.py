@@ -27,7 +27,6 @@ def _thirds_table():
     global _THIRDS
     if _THIRDS is None:
         import json
-        from pathlib import Path
         p = paths.THIRDS_JSON
         _THIRDS = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
     return _THIRDS

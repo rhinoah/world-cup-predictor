@@ -8,6 +8,8 @@ Se dibuja en alta resolucion y se reduce, para bordes suaves.
 """
 from PIL import Image, ImageDraw
 
+from prode import paths
+
 R = 1024
 def s(v): return int(v / 256 * R)
 def pts(seq): return [(s(x), s(y)) for x, y in seq]
@@ -45,6 +47,6 @@ d.polygon(pts([(110, 197), (146, 197), (163, 219), (93, 219)]), fill=GOLD)
 d.rounded_rectangle(box((85, 216, 171, 233)), radius=s(7), fill=GOLD_D)
 
 out = img.resize((256, 256), Image.LANCZOS)
-out.save("prode.png")
-out.save("prode.ico", sizes=[(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)])
+out.save(paths.PNG)
+out.save(paths.ICO, sizes=[(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)])
 print("generado: prode.png + prode.ico")
