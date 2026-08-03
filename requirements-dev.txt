@@ -1,2 +1,8 @@
--r requirements.txt
+# Lo minimo para correr la suite: el modelo y la capa de datos no necesitan GUI.
+# Es el MISMO archivo que instala el CI (.github/workflows/tests.yml), asi que
+# `pip install -r requirements-dev.txt && pytest` reproduce exactamente lo que
+# corre en Actions -- tambien en Linux/macOS, donde tkinter puede no estar.
+# Para levantar la app hace falta ademas `pip install -r requirements.txt`.
+pandas
+numpy
 pytest>=8.0

@@ -330,9 +330,12 @@ def test_groups_no_importa_app_data():
     assert "bracket" not in de_modulo
 
 
-def test_standings_cuenta_cruces_entre_grupos(match):
-    """Hoy un partido entre equipos de grupos distintos suma en ambas tablas."""
-    fx = _fx(match, [("Mexico", "Brazil", 1, 0)])
+def test_standings_ignora_un_cruce_entre_grupos_distintos(match):
+    """Antes sumaba en LAS DOS tablas. `standings` recibe la lista de partidos y
+    no controla quien se la pasa: un cruce de eliminacion (o un amistoso) le
+    daria puntos de fase de grupos a los dos equipos."""
+    fx = _fx(match, [("Mexico", "Brazil", 1, 0)])       # A vs C
     tb = groups.standings(fx)
-    assert {r["team"]: r["pts"] for r in tb["A"]}["Mexico"] == 3
-    assert {r["team"]: r["pj"] for r in tb["C"]}["Brazil"] == 1
+
+    assert {r["team"]: r["pts"] for r in tb["A"]}["Mexico"] == 0
+    assert {r["team"]: r["pj"] for r in tb["C"]}["Brazil"] == 0

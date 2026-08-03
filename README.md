@@ -142,12 +142,17 @@ eliminación. El marcador sugerido óptimo se siguió en 100 de 104 partidos.
 
 ### 🆚 Bonus: contra el mercado de predicciones
 
-Durante las rondas finales comparamos el modelo contra **Kalshi** (mercado de
+Durante las rondas finales comparé el modelo contra **Kalshi** (mercado de
 predicciones con dinero real): en la semifinal discreparon de lleno (el mercado
 favorecía a Inglaterra; el modelo, a Argentina — **ganó Argentina**), y en la
 final ambos favorecían a España pero el mercado con más convicción (**ganó
-España**). Saldo honesto: **1 a 1** — un modelo casero le peleó de igual a igual
-a un mercado real durante un Mundial.
+España**).
+
+Es una anécdota, no un resultado: son **dos partidos**, y en uno de los dos ni
+siquiera discrepaban. Lo dejo porque fue divertido, no porque demuestre nada —
+para que lo demostrara habría que haber guardado las probabilidades del mercado
+partido a partido y comparar con Brier o log-loss. Los datos del modelo están
+(columna `ev_v3`); los del mercado no los guardé.
 
 ## 🧪 Tests
 

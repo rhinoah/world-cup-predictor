@@ -40,6 +40,11 @@ def standings(fx):
         h, a = m["home"], m["away"]
         if h not in rows or a not in rows:
             continue
+        # Los dos del MISMO grupo: el modulo recibe la lista de partidos y no
+        # controla que le pasen solo los de la fase de grupos. Un cruce de
+        # eliminacion sumaria en las dos tablas a la vez.
+        if team_group(h) != team_group(a):
+            continue
         rh, ra = m["real"]
         games.append((h, a, rh, ra))
         for t, gf, gc in ((h, rh, ra), (a, ra, rh)):

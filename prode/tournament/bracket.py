@@ -7,10 +7,12 @@ de los grupos (aunque la fase no haya terminado): un vistazo de como quedarian
 los cruces si las posiciones se mantuvieran.
 
 Estructura oficial de cruces (Annex C del reglamento FIFA). Los 8 partidos que
-enfrentan a un ganador de grupo con un "mejor 3ro" tienen un conjunto de grupos
-elegibles; se asignan los 8 mejores terceros resolviendo un emparejamiento
-valido (puede diferir de la asignacion oficial exacta, que sale de la tabla de
-495 combinaciones del Annex C, pero respeta los grupos elegibles de cada cruce).
+enfrentan a un ganador de grupo con un "mejor 3ro" se resuelven con la tabla
+OFICIAL: `thirds_table.json` trae las 495 combinaciones posibles de los 8 grupos
+que aportan tercero, y para cada una dice a que cruce va el tercero de cada
+grupo. Si la combinacion todavia no esta completa (faltan grupos por terminar)
+se cae a un backtracking que respeta los grupos elegibles de cada cruce, que es
+una proyeccion razonable pero puede diferir de la asignacion final.
 """
 from __future__ import annotations
 

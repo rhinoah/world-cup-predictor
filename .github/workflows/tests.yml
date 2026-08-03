@@ -23,12 +23,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      # La GUI (customtkinter/pystray) no se instala en CI: los tests cubren el
-      # modelo y la capa de datos, que son multiplataforma y sin dependencias graficas.
+      # requirements-dev.txt y no una lista a mano: asi lo que corre en CI es
+      # exactamente lo que reproduce quien sigue el README. La GUI queda afuera
+      # a proposito (los tests cubren el modelo y la capa de datos, sin graficos).
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy pytest
+          pip install -r requirements-dev.txt
 
       - name: Run tests
         run: pytest

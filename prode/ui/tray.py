@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-ui_tray.py
-==========
+prode/ui/tray.py
+================
 Todo lo que la app hace FUERA de su ventana: el icono en la bandeja del sistema,
 los bips de aviso y el canal por el que una segunda instancia le pide a la
 primera que se muestre.

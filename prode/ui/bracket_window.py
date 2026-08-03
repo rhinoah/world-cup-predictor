@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-ui_bracket.py
-=============
+prode/ui/bracket_window.py
+==========================
 Las dos ventanas que muestran como va el torneo: la tabla de posiciones de los
 12 grupos y el cuadro de eliminacion completo (con los ganadores que ya
 avanzaron, los penales y el semaforo de acierto de cada partido).
 
-Son ~180 lineas de armado de widgets que no tienen nada que ver con la pantalla
+Son ~200 lineas de armado de widgets que no tienen nada que ver con la pantalla
 principal: de todo `App` solo usan `_load_result`, para poder cargar un
 resultado con un clic desde el propio cuadro.
 """

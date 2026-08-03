@@ -160,8 +160,16 @@ def team_summary(matches: pd.DataFrame, since: int) -> pd.DataFrame:
     return out.sort_values("ppg", ascending=False)
 
 
-def head_to_head(matches: pd.DataFrame, team_a: str, team_b: str) -> dict:
-    """Historial directo entre dos selecciones (todo el dataset)."""
+def head_to_head(matches: pd.DataFrame, team_a: str, team_b: str,
+                 as_of: pd.Timestamp | None = None) -> dict:
+    """Historial directo entre dos selecciones.
+
+    OJO SI SE USA COMO FEATURE: pasar `as_of`. Sin el mira TODO el dataset,
+    incluidos partidos posteriores al que se quiere predecir, que es exactamente
+    el data leakage que el proyecto no se permite (ver `recent_form`, que filtra
+    `date < as_of`). Hoy no lo llama nadie: quedo como helper exploratorio."""
+    if as_of is not None:
+        matches = matches[matches["date"] < as_of]
     h2h = matches[(matches["team"] == team_a) & (matches["opponent"] == team_b)]
     if h2h.empty:
         return {"matches": 0}
