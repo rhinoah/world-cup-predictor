@@ -120,10 +120,12 @@ def _match_thirds(third_groups, slots):
     return result
 
 
-def resolve_r32(tables=None):
+def resolve_r32(tables):
     """16 dicts {match, a, b, a_code, b_code} con los equipos proyectados (o None
-    si todavia no se puede determinar el cupo)."""
-    tables = tables or groups.standings()
+    si todavia no se puede determinar el cupo).
+
+    `tables` son las posiciones que devuelve `groups.standings(fx)`. Se pasan y no
+    se resuelven aca: este modulo no lee de disco."""
     _, best = groups.qualifiers(tables)
     pos = {}
     for g, tt in tables.items():
@@ -166,7 +168,9 @@ def slot_label(code):
 
 
 if __name__ == "__main__":
-    rows = resolve_r32()
+    import app_data          # solo al correrlo a mano: ver la nota en groups.py
+
+    rows = resolve_r32(groups.standings(app_data.fixture()))
     print(f"Round of 32 proyectado ({sum(1 for m in rows if m['a'] and m['b'])}/16 cruces con equipos):")
     for m in rows:
         a = m["a"] or f"[{m['a_code']}]"

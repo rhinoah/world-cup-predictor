@@ -9,25 +9,33 @@ los 2 primeros de cada grupo + los 8 mejores terceros -> Round of 32.
 Desempate (FIFA 2026): puntos -> diferencia de gol -> goles a favor (los
 criterios siguientes -conducta, ranking- no se modelan aca).
 
-Solo cuentan los partidos TERMINADOS (match_state == "done").
+Solo cuentan los partidos TERMINADOS (los que traen `state == "done"`).
+
+Este modulo es COMPUTO PURO: recibe la lista de partidos y devuelve tablas, sin
+leer nada de disco. Antes importaba `app_data` para dos cosas -- resolver el
+fixture por defecto y preguntar si un partido habia terminado -- y eso cerraba
+un ciclo de imports (app_data -> groups -> app_data) que habia que parchear con
+imports perezosos adentro de las funciones. Hoy el estado del partido viaja en
+el propio dict, asi que la dependencia desaparecio y la direccion quedo en un
+solo sentido: la capa de datos arma los partidos, este modulo los cuenta.
 """
 from __future__ import annotations
 
-import app_data
 from teams import GROUPS, team_group  # noqa: F401  (padron unico; se re-exportan)
 
 # GROUPS (12 grupos x 4) y team_group() salen de teams.py, el padron unico de las
 # 48 selecciones; se re-exportan aca porque este es el modulo de la fase de grupos.
 
 
-def standings(fx=None):
-    """Tabla de cada grupo (lista ordenada de dicts) con los partidos terminados."""
-    fx = fx or app_data.fixture()
+def standings(fx):
+    """Tabla de cada grupo (lista ordenada de dicts) con los partidos terminados.
+
+    `fx` son los partidos tal como los arma `app_data.fixture()`."""
     rows = {t: dict(team=t, pj=0, g=0, e=0, p=0, gf=0, gc=0, dg=0, pts=0)
             for teams in GROUPS.values() for t in teams}
     games = []   # partidos jugados, para el desempate por enfrentamiento directo
     for m in fx:
-        if m["real"] is None or app_data.match_state(m["kickoff"]) != "done":
+        if m["real"] is None or m["state"] != "done":
             continue
         h, a = m["home"], m["away"]
         if h not in rows or a not in rows:
@@ -75,9 +83,8 @@ def _h2h(block, games):
                                         h[r["team"]]["gf"], r["dg"], r["gf"]), reverse=True)
 
 
-def qualifiers(tables=None):
+def qualifiers(tables):
     """(set de clasificados directos 1ro/2do, set de los 8 mejores 3ros)."""
-    tables = tables or standings()
     direct, thirds = set(), []
     for g, tt in tables.items():
         direct.add(tt[0]["team"])
@@ -88,9 +95,8 @@ def qualifiers(tables=None):
     return direct, best
 
 
-def qualification_status(tables=None):
+def qualification_status(tables):
     """team -> 'direct' (1ro/2do) / 'third' (mejor 3ro) / 'out'."""
-    tables = tables or standings()
     direct, best = qualifiers(tables)
     status = {}
     for tt in tables.values():
@@ -100,14 +106,17 @@ def qualification_status(tables=None):
     return status
 
 
-def group_matches(g, fx=None):
-    fx = fx or app_data.fixture()
+def group_matches(g, fx):
     teams = set(GROUPS[g])
     return sorted((m for m in fx if m["home"] in teams and m["away"] in teams),
                   key=lambda m: m["kickoff"])
 
 
 if __name__ == "__main__":
+    # El unico lugar del modulo que toca la capa de datos, y solo al correrlo a
+    # mano: importarlo arriba volveria a crear el ciclo que este modulo evita.
+    import app_data
+
     fx = app_data.fixture()
     tb = standings(fx)
     direct, best = qualifiers(tb)

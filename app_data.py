@@ -15,7 +15,9 @@ from pathlib import Path
 
 import pandas as pd
 
+import bracket
 import csv_io
+import groups
 import results
 import scoring
 from teams import ABBR, FLAG_ISO, HOSTS  # noqa: F401  (padron unico; se re-exportan)
@@ -183,6 +185,7 @@ def fixture():
         ht, at = h["home_team"], h["away_team"]
         out.append({"home": ht, "away": at,
                     "kickoff": h["kickoff_arg"].to_pydatetime(),
+                    "state": match_state(h["kickoff_arg"].to_pydatetime(), home=ht, away=at),
                     "host": ht in HOSTS, "real": results.score_of(res_idx, ht, at),
                     "pred": pred_idx.get((ht, at)),
                     "load": load_idx.get((ht, at), (0, 0))})
@@ -193,8 +196,6 @@ def knockout_fixture():
     """Partidos de eliminacion (M73-M104) con equipos proyectados (resolve_r32 +
     arbol) o placeholder, fecha de bracket.MATCH_DT, resultado real (override/
     martj42) y pred/load del usuario. 'defined' = ambos equipos ya se conocen."""
-    import bracket
-    import groups
     res, _, pron = _load()
     res_idx = results.by_teams(wc_matches(res))
     pred_idx, load_idx = _index_pronosticos(pron)
@@ -203,8 +204,8 @@ def knockout_fixture():
     done_groups = set()
     for g, teams in groups.GROUPS.items():
         ts = set(teams)
-        if sum(1 for m in fx_g if m["home"] in ts and m["away"] in ts and m["real"] is not None
-               and match_state(m["kickoff"]) == "done") >= 6:
+        if sum(1 for m in fx_g if m["home"] in ts and m["away"] in ts
+               and m["real"] is not None and m["state"] == "done") >= 6:
             done_groups.add(g)
     all_done = len(done_groups) == len(groups.GROUPS)
 
@@ -242,8 +243,9 @@ def knockout_fixture():
                 winners[mnum], losers[mnum] = (ht, at) if real[0] > real[1] else (at, ht)
             elif pens:                              # empate en 120' -> avanza el de mas penales
                 winners[mnum], losers[mnum] = (ht, at) if pens[0] > pens[1] else (at, ht)
+        ko = pd.to_datetime(bracket.MATCH_DT[mnum]).to_pydatetime()
         out.append({"match": mnum, "home": ht, "away": at, "a_label": al, "b_label": bl,
-                    "kickoff": pd.to_datetime(bracket.MATCH_DT[mnum]).to_pydatetime(),
+                    "kickoff": ko, "state": match_state(ko, home=ht, away=at),
                     "host": False, "real": real, "pens": pens, "winner": winners.get(mnum),
                     "defined": bool(ht and at), "stage": "ko",
                     "pred": pred_idx.get((ht, at)) if ht and at else None,

@@ -1,12 +1,15 @@
 """Tests de groups.py: integridad de GROUPS, tablas, desempates y clasificados.
 
-OJO: `groups.standings()` llama a `app_data.match_state(m["kickoff"])` sin pasar
-`now`, asi que compara contra el reloj real. Por eso todos los partidos de estos
-tests usan `LONG_AGO` como kickoff: siempre dan "done", corra cuando corra.
+OJO: `groups.standings()` cuenta solo los partidos con `state == "done"`, y el
+factory `match` de conftest calcula ese estado contra el reloj real. Por eso
+todos los partidos de estos tests usan `LONG_AGO` como kickoff: siempre dan
+"done", corra cuando corra (y `FUTURO`, nunca).
 """
 from __future__ import annotations
 
+import ast
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
@@ -304,10 +307,27 @@ def test_group_matches_filtra_por_grupo_y_ordena_por_kickoff(match):
 # --------------------------------------------------------------------------
 # comportamiento actual documentado (ver notas)
 # --------------------------------------------------------------------------
-def test_standings_con_lista_vacia_cae_al_fixture_de_disco(project):
-    """`fx or app_data.fixture()`: una lista vacia es falsy y se va a leer el CSV."""
-    with pytest.raises(FileNotFoundError):
-        groups.standings([])
+def test_standings_no_lee_de_disco(project):
+    """groups es computo puro: sin partidos devuelve las 12 tablas en cero, no se
+    va a buscar el fixture. Antes tenia un `fx or app_data.fixture()` que hacia
+    justo eso, y era la mitad del ciclo de imports app_data <-> groups.
+
+    El `project` apunta BASE a un tmp vacio: si quedara alguna lectura, explota."""
+    tb = groups.standings([])
+
+    assert list(tb) == list("ABCDEFGHIJKL")
+    assert all(r["pj"] == 0 for filas in tb.values() for r in filas)
+
+
+def test_groups_no_importa_app_data():
+    """El ciclo se cierra en el import, asi que hay que fijarlo en el import: si
+    alguien vuelve a poner `import app_data` arriba, este test lo ataja."""
+    arbol = ast.parse(Path(groups.__file__).read_text(encoding="utf-8"))
+    de_modulo = {(n.module if isinstance(n, ast.ImportFrom) else a.name).split(".")[0]
+                 for n in arbol.body if isinstance(n, (ast.Import, ast.ImportFrom))
+                 for a in n.names}
+    assert "app_data" not in de_modulo
+    assert "bracket" not in de_modulo
 
 
 def test_standings_cuenta_cruces_entre_grupos(match):

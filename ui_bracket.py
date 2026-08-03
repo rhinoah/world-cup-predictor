@@ -100,7 +100,8 @@ class BracketMixin:
         win.geometry(f"{min(1500, sw - 30)}x{min(960, sh - 70)}")
         win.configure(fg_color=BG); win.transient(self)
         win.protocol("WM_DELETE_WINDOW", lambda: (setattr(self, "_modal", None), win.destroy()))
-        r32 = {m["match"]: m for m in bracket.resolve_r32()}
+        r32 = {m["match"]: m for m in
+               bracket.resolve_r32(groups.standings(app_data.fixture()))}
         self._ko = {m["match"]: m for m in app_data.knockout_fixture()}   # ganadores ya avanzados
         # Lo de "proyección" solo aplica mientras los grupos no cerraron: una vez que los 16avos
         # quedan definidos ya no se proyecta nada, y al terminar todo tampoco queda nada por completar.

@@ -15,6 +15,8 @@ import traceback
 
 import pandas as pd
 
+import app_data
+import bracket
 import csv_io
 from predict_match_v2 import load_results, fit_iterative
 from elo import compute_elo
@@ -63,7 +65,6 @@ def main():
     #     adelante, a medida que se resuelven los ganadores de cada ronda) ---
     n_ko = 0
     try:
-        import bracket, app_data
         for m in app_data.knockout_fixture():
             ht, at = m.get("home"), m.get("away")
             if not ht or not at or ht not in p["tidx"] or at not in p["tidx"]:

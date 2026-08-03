@@ -103,8 +103,15 @@ def project(tmp_path, monkeypatch) -> FakeProject:
 
 def _match(home="Spain", away="Argentina", kickoff=None, real=None, pred=None,
            load=(1, 1), **extra):
-    """Dict de partido con la forma que devuelven fixture()/knockout_fixture()."""
-    m = {"home": home, "away": away, "kickoff": kickoff or GROUPS_DAY,
+    """Dict de partido con la forma que devuelven fixture()/knockout_fixture().
+
+    `state` se calcula contra el reloj como en produccion, pero SIN pasar los
+    equipos: asi `match_state` no consulta data/finished.csv y estos partidos
+    de juguete no dependen de los datos reales del repo. Se puede pisar pasando
+    `state=...` explicitamente."""
+    ko = kickoff or GROUPS_DAY
+    m = {"home": home, "away": away, "kickoff": ko,
+         "state": app_data.match_state(ko),
          "real": real, "pred": pred, "load": load, "host": False}
     m.update(extra)
     return m
