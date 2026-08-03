@@ -10,7 +10,7 @@ que uno se acordaba. Aca esta el orden real, con lo que produce cada paso.
 
     python run.py setup     # clon recien bajado: dataset, fixture, banderas, icono
     python run.py update    # el ciclo diario: dataset -> liquidar -> jornada -> detalle
-    python run.py analisis  # backtests y real-vs-esperado (tarda varios minutos)
+    python run.py analisis  # backtests (segundos) + real-vs-esperado (varios minutos)
     python run.py --list    # muestra los pasos sin correr nada
 
 Cada paso corre con el MISMO interprete que ejecuto este archivo (`sys.executable`)
@@ -69,7 +69,9 @@ ANALISIS = [
          "por pantalla"),
     Paso("backtest_elo.py", "valida el blend con Elo",
          "por pantalla"),
-    Paso("backfill_ev.py", "recalcula el EV as-of de cada pronostico (real vs esperado)",
+    # El unico paso lento del proyecto: re-ajusta el modelo una vez por cada
+    # fecha del torneo, asi que son ~100 ajustes. Los backtests tardan segundos.
+    Paso("backfill_ev.py", "recalcula el EV as-of de cada pronostico (varios minutos)",
          "pronosticos.csv (columna ev_v3) + docs/ev_vs_real.png"),
 ]
 

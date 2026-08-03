@@ -2,11 +2,20 @@
 """
 predict_match_v3.py
 ===================
-Version de PRODUCCION. Modelo de fuerzas ataque/defensa (v2) BLENDEADO con Elo
-dinamico (peso w=0.6). En backtest sobre 9 torneos saca ~0.90 puntos/partido,
-contra ~0.825 del modelo sin Elo y del baseline "1-0 al favorito".
+El modelo de PRODUCCION. Usar este por defecto.
 
-Usar este por defecto.
+Toma el motor de predict_match_v2 (carga de datos, fuerzas de ataque/defensa,
+matriz de marcadores) y le blendea el Elo dinamico de elo.py con peso w=0.6.
+Lo unico que agrega este archivo es ese blend: son 13 lineas.
+
+POR QUE EXISTE: las fuerzas de goles solas no le ganan al baseline tonto. Sobre
+los mismos 9 torneos (2016-2024), "1-0 al favorito" saca 0.835 y el modelo de
+fuerzas 0.827 -- pierde. El Elo discrimina mucho mejor quien es favorito, y es
+el componente que despega: 0.912 con w=0.6 (`backtest_elo.py`). En el Mundial
+2026, completamente out-of-sample, rindio 0.88.
+
+Quien lo corre: build_pronosticos.py (los sugeridos de la app),
+predict_matchday.py (la jornada del dia) y backfill_ev.py (el EV as-of).
 
 Uso:
     python predict_match_v3.py "Mexico" "South Africa"
@@ -21,7 +30,7 @@ import numpy as np
 import pandas as pd
 
 import scoring
-from predict_match_v2 import load_results, fit_iterative, score_matrix, modal
+from predict_match_v2 import load_results, fit_iterative, score_matrix
 from elo import compute_elo, blended_lambdas
 
 ELO_WEIGHT = 0.6
@@ -84,7 +93,7 @@ def main():
     for name, rel in (("gana " + args.home, lambda i, j: i > j),
                       ("empate", lambda i, j: i == j),
                       ("gana " + args.away, lambda i, j: i < j)):
-        mi, mj, mp, mev = modal(r["M"], r["ev"], rel)
+        mi, mj, mp, mev = scoring.modal(r["M"], r["ev"], rel)
         star = "  <==" if (mi, mj) == (bi, bj) else ""
         print(f"  {name:<18}{mi}-{mj}   P={mp*100:4.1f}%  EV={mev:.3f}{star}")
     print("\n" + "=" * 46)

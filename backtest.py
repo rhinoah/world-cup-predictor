@@ -17,14 +17,16 @@ Uso:
 """
 from __future__ import annotations
 
-import numpy as np
-
 from predict_match_v2 import load_results, fit_iterative, score_matrix
 from scoring import points as prode_points, best_ev_score, most_likely_score
 
 # torneos finales (no clasificatorias) a evaluar
 TARGET_TOURNAMENTS = ["FIFA World Cup", "UEFA Euro", "Copa América"]
 MIN_YEAR = 2016
+# El Mundial 2026 YA esta en data/results.csv y queda AFUERA a proposito: es el
+# out-of-sample contra el que se contrasta lo que promete este backtest. Si
+# entrara, el numero "esperado" incluiria al torneo que valida ese esperado.
+MAX_YEAR = 2024
 
 
 def lambdas(h, a, neutral, p):
@@ -38,7 +40,9 @@ def main():
     full = load_results()
     games = []
     for patt in TARGET_TOURNAMENTS:
-        sub = full[(full["tournament"] == patt) & (full["date"].dt.year >= MIN_YEAR)]
+        sub = full[(full["tournament"] == patt)
+                   & (full["date"].dt.year >= MIN_YEAR)
+                   & (full["date"].dt.year <= MAX_YEAR)]
         for yr, g in sub.groupby(sub["date"].dt.year):
             games.append((f"{patt} {yr}", g))
     games.sort(key=lambda r: r[1]["date"].min())

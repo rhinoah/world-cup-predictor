@@ -8,15 +8,19 @@ favorito". Reporta puntos/partido (regla EV) para varios pesos w del Elo.
 """
 from __future__ import annotations
 
-import numpy as np
-
 from predict_match_v2 import load_results, fit_iterative, score_matrix
 from elo import compute_elo, blended_lambdas, HFA
 from scoring import points as prode_points, best_ev_score as best_ev
 
 TARGET = ["FIFA World Cup", "UEFA Euro", "Copa América"]
 MIN_YEAR = 2016
-WEIGHTS = [0.0, 0.3, 0.5, 0.7, 1.0]
+# El Mundial 2026 YA esta en data/results.csv y queda AFUERA a proposito: es el
+# out-of-sample contra el que se contrasta lo que promete este backtest. Si
+# entrara, el numero "esperado" incluiria al torneo que valida ese esperado.
+MAX_YEAR = 2024
+# w=0.6 es el de PRODUCCION (predict_match_v3.ELO_WEIGHT): tiene que estar en la
+# grilla, si no el unico numero que importa hay que interpolarlo a ojo.
+WEIGHTS = [0.0, 0.3, 0.5, 0.6, 0.7, 1.0]
 
 
 def main():
@@ -25,7 +29,9 @@ def main():
 
     games = []
     for patt in TARGET:
-        sub = full[(full["tournament"] == patt) & (full["date"].dt.year >= MIN_YEAR)]
+        sub = full[(full["tournament"] == patt)
+                   & (full["date"].dt.year >= MIN_YEAR)
+                   & (full["date"].dt.year <= MAX_YEAR)]
         for yr, g in sub.groupby(sub["date"].dt.year):
             games.append((f"{patt} {yr}", g))
     games.sort(key=lambda r: r[1]["date"].min())

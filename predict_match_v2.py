@@ -2,20 +2,32 @@
 """
 predict_match_v2.py
 ===================
-Igual que predict_match.py pero con fuerzas de ataque/defensa estimadas
-AJUSTANDO POR LA FUERZA DEL RIVAL (estimacion iterativa de maxima verosimilitud
-estilo Maher / Dixon-Coles), en vez de promedios crudos.
+El MOTOR del modelo -- y, de paso, el CLI de la version sin Elo.
 
-Por que importa: el metodo de ratios del v1 trata igual un gol a un rival
-flojo que a uno fuerte. Mexico juega muchos rivales debiles (CONCACAF) -> su
-ataque queda inflado; Sudafrica juega rivales africanos medios -> su defensa
-queda mal calibrada. El ajuste iterativo reparte el credito segun contra quien
-se jugo: alpha_i (ataque) y beta_j (defensa) se resuelven simultaneamente.
+OJO: este NO es el modelo de produccion; ese es predict_match_v3.py. Pero v3 no
+es autonomo: la carga de datos (`load_results`), el ajuste de fuerzas
+(`fit_iterative`) y la matriz de marcadores (`score_matrix`) viven aca, y de aca
+las importan v3, los dos backtests, build_pronosticos y predict_matchday. v2 no
+es una version vieja que quedo dando vueltas: es la libreria compartida.
 
-Mantiene: decay temporal, peso menor a amistosos, localia (gamma), correccion
+Que hace: estima fuerzas de ataque/defensa AJUSTANDO POR LA FUERZA DEL RIVAL
+(estimacion iterativa de maxima verosimilitud estilo Maher / Dixon-Coles), en
+vez de promedios crudos de goles como el primer prototipo.
+
+Por que importa el ajuste: un promedio crudo trata igual un gol a un rival flojo
+que a uno fuerte. Mexico juega muchos rivales debiles (CONCACAF) -> su ataque
+queda inflado; Sudafrica juega rivales africanos medios -> su defensa queda mal
+calibrada. El punto fijo reparte el credito segun contra quien se jugo: alpha_i
+(ataque) y beta_j (defensa) se resuelven simultaneamente.
+
+Incluye: decay temporal, peso menor a amistosos, localia (gamma), correccion
 Dixon-Coles para marcadores bajos y la regla de EV = 2*P(m) + P(direccion).
 
-Uso:
+CUANTO RINDE: 0.827 puntos/partido en backtest (9 torneos 2016-2024), POR DEBAJO
+de su propio baseline "1-0 al favorito" (0.835). Las fuerzas de goles solas no
+le ganan al baseline tonto; el salto lo da el Elo, y por eso existe el v3.
+
+Uso (para ver las fuerzas sin el Elo encima, o comparar contra v3):
     python predict_match_v2.py "Mexico" "South Africa"
     python predict_match_v2.py "Argentina" "Brazil" --neutral
     python predict_match_v2.py "Mexico" "South Africa" --as-of 2010-06-11
@@ -46,7 +58,8 @@ def apply_manual_overrides(df: pd.DataFrame) -> pd.DataFrame:
     """Los resultados cargados a mano, sobre el dataset que llega por parametro.
 
     Envoltorio de `results.apply_overrides` con la ruta de este modulo: existe
-    porque `liquidar` y `predict_matchday` lo importan con este nombre."""
+    porque `predict_matchday` lo importa con este nombre (`liquidar` ya usa
+    `results` directamente)."""
     return results.apply_overrides(df, DATA)
 
 
@@ -159,10 +172,6 @@ def predict(home: str, away: str, neutral: bool, p: dict) -> dict:
                 ev=ev, best=(bi, bj), best_ev=float(ev[bi, bj]))
 
 
-# re-export por compatibilidad: v3 y los CLI importan `modal` desde aca
-modal = scoring.modal
-
-
 def main() -> None:
     ap = argparse.ArgumentParser(description="Marcador a cargar (v2, ajuste por rival)")
     ap.add_argument("home")
@@ -214,7 +223,7 @@ def main() -> None:
     for name, rel in (("gana " + args.home, lambda i, j: i > j),
                       ("empate", lambda i, j: i == j),
                       ("gana " + args.away, lambda i, j: i < j)):
-        mi, mj, mp, mev = modal(r["M"], r["ev"], rel)
+        mi, mj, mp, mev = scoring.modal(r["M"], r["ev"], rel)
         star = "  <==" if (mi, mj) == (bi, bj) else ""
         print(f"  {name:<18} {mi}-{mj}   P={mp*100:4.1f}%   EV={mev:.3f}{star}")
 

@@ -11,7 +11,7 @@ Construido íntegramente en sesiones de **vibe coding** con Claude Code, para ju
 dos pools de predicciones del Mundial 2026 con amigos. **No es una herramienta de
 apuestas** — es un proyecto por diversión y aprendizaje.
 
-> **El resultado que importa:** el modelo prometía ~**0.90 puntos/partido** en
+> **El resultado que importa:** el modelo prometía **0.91 puntos/partido** en
 > backtest histórico (9 torneos 2016–2024) y rindió **0.88** en el Mundial 2026
 > real — 104 partidos completamente *out-of-sample*. No estaba sobreajustado.
 
@@ -43,10 +43,21 @@ La evolución (cada versión validada por backtest antes de reemplazar a la ante
 
 | Versión | Idea | Backtest (pts/partido) |
 |---|---|---|
-| baseline | "1-0 al favorito" | 0.825 |
-| v1 | Poisson con fuerzas ataque/defensa crudas + decay temporal + Dixon-Coles | — |
+| baseline | "1-0 al favorito" (favorito por Elo) | 0.825 |
+| v1 *(borrado)* | Poisson con fuerzas ataque/defensa crudas + decay temporal + Dixon-Coles | — |
 | v2 | fuerzas ajustadas por rival (punto fijo estilo Maher) + localía | 0.827 |
-| **v3** | **v2 blendeado con Elo dinámico (w=0.6)** | **~0.90** |
+| **v3 — producción** | **v2 blendeado con Elo dinámico (w=0.6)** | **0.912** |
+
+Los tres números salen de `python run.py analisis` sobre los mismos 9 torneos: la
+fila `TOTAL` de `backtest.py` (columna `EV` → v2) y la de `backtest_elo.py`
+(columna `w=0.6` → v3, columna `1-0fav` → baseline).
+
+> **Lectura honesta: el modelo de fuerzas solo no le gana al baseline tonto.**
+> Contra el baseline que imprime su propio script — el favorito por goles
+> esperados — v2 **pierde**: 0.827 contra 0.835. El Elo es el que despega, y por
+> eso existe v3. `predict_match_v2.py` no quedó como reliquia: es el motor (carga
+> de datos, ajuste de fuerzas, matriz de marcadores) que v3 importa; v3 sólo
+> agrega el blend, y son 13 líneas.
 
 Piezas clave:
 
@@ -65,7 +76,15 @@ Piezas clave:
 ## 📊 Validación
 
 **Backtest** (`backtest.py`, `backtest_elo.py`): 9 torneos grandes (Mundial, Euro,
-Copa América 2016–2024), split temporal estricto, puntuando con 3/1/0.
+Copa América **2016–2024**), split temporal estricto, puntuando con 3/1/0.
+
+El tope en 2024 (`MAX_YEAR`) es deliberado y vale la pena explicarlo, porque es un
+error que este repo llegó a cometer: el dataset se actualiza solo, así que una vez
+terminado el torneo **el Mundial 2026 entró al backtest**. La tabla pasó a tener una
+fila `FIFA World Cup 2026` y el total subió de 0.827 a 0.847 — un modelo que parecía
+mejor porque estaba midiéndose contra el mismo torneo que se usa para validarlo
+out-of-sample. Es exactamente el leakage que el resto del proyecto evita en las
+features, colado por la puerta de atrás de la validación.
 
 **En vivo — Mundial 2026 (104 partidos):**
 
@@ -75,7 +94,7 @@ Copa América 2016–2024), split temporal estricto, puntuando con 3/1/0.
 | Marcadores exactos | 11 (11%) |
 | Dirección acertada | 58 (56%) |
 | Fallados | 35 (34%) |
-| Backtest esperado | ~0.90/partido ✔ |
+| Backtest esperado | 0.91/partido ✔ |
 
 ### Real vs esperado (EV)
 
@@ -202,7 +221,8 @@ scripts de análisis corren en cualquier plataforma.
 | `Prode.bat` / `update_dataset.bat` / `setup_windows.bat` | lanzar la app / correr el ciclo diario / instalar la automatización |
 | `build_features.py` | descarga el dataset y construye la tabla de features |
 | `elo.py` | rating Elo dinámico + blend de lambdas |
-| `predict_match_v2.py` / `_v3.py` | modelo de fuerzas / blend con Elo (**producción**) |
+| `predict_match_v2.py` | el motor: carga de datos, fuerzas ajustadas por rival, matriz de marcadores |
+| `predict_match_v3.py` | **el modelo de producción**: v2 + blend con Elo (w=0.6) |
 | `backtest.py` / `backtest_elo.py` | validación temporal sobre torneos 2016–2024 |
 | `build_pronosticos.py` | corre el v3 sobre los partidos pendientes (grupos + llaves) |
 | `liquidar.py` | cruza pronósticos con resultados y calcula el puntaje |
@@ -223,11 +243,23 @@ scripts de análisis corren en cualquier plataforma.
 ## 📚 Datos y créditos
 
 - Resultados históricos de selecciones: [martj42/international_results](https://github.com/martj42/international_results) (~50k partidos).
-- Banderas: [flagcdn](https://flagcdn.com/) (generadas por `build_flags.py`, no versionadas).
 - Tabla de terceros: plantilla de Wikipedia del Annex C de FIFA, parseada por `parse_thirds.py`.
+- Banderas: [flagcdn](https://flagcdn.com/), el CDN de [flagpedia.net](https://flagpedia.net/).
+  **No se versionan a propósito.** `build_flags.py` baja los 48 PNG (~12 KB en total,
+  ~2 s) dentro de `run.py setup`, y `flags/` está en `.gitignore` con el resto de los
+  artefactos regenerables. El motivo no es el peso sino la licencia: este repo es MIT
+  y las banderas no lo son — flagpedia las publica como dominio público
+  ([sus términos](https://flagpedia.net/terms) las exceptúan explícitamente del resto
+  del sitio), pero ese respaldo es una oración en una web, no un archivo de licencia
+  auditable. Distribuirlas obligaría a poner una excepción en el `LICENSE` para 48
+  binarios que cualquiera baja en dos segundos. Si alguna vez hiciera falta
+  versionarlas, la salida correcta es [lipis/flag-icons](https://github.com/lipis/flag-icons),
+  que es MIT explícito. Si la descarga falla, la app muestra los nombres sin bandera.
+- El ícono (`prode.ico` / `prode.png`) **sí** se versiona: es arte original, dibujado
+  por `make_icon.py`, que queda como la fuente regenerable.
 
 Los CSV de datos y los pronósticos personales **no se versionan** (ver
-`.gitignore`); todo lo pesado se regenera con `build_features.py`.
+`.gitignore`); todo lo pesado se regenera con `run.py setup`.
 
 ## 🧭 Roadmap
 
