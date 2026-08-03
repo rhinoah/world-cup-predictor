@@ -163,19 +163,25 @@ vacía en el 96% de los partidos, sigue siendo tolerante.
 ```bash
 pip install -r requirements.txt
 
-python build_features.py          # baja el dataset (martj42) y arma features
-python build_pronosticos.py       # corre el modelo sobre los partidos pendientes
+python run.py setup               # clon nuevo: dataset, fixture, banderas, ícono
 python prode_app.py               # la app de escritorio (Windows)
+```
 
-# predicción puntual de un partido:
-python predict_match_v3.py "Spain" "Argentina" --neutral
+El pipeline está en `run.py`, que es la única definición de en qué orden va cada
+cosa — la tarea programada y este README lo invocan a él en vez de repetir la
+secuencia:
 
-# validación y análisis:
-python backtest.py                # backtest del modelo de goles
-python backtest_elo.py            # backtest del blend con Elo
-python liquidar.py                # liquida pronósticos vs resultados reales
-python backfill_ev.py             # análisis real vs esperado (EV)
-pytest                            # suite de tests
+```bash
+python run.py --list              # qué hace cada paso y qué produce
+python run.py update              # ciclo diario: dataset → liquidar → jornada → detalle
+python run.py analisis            # backtests + real vs esperado (tarda varios minutos)
+```
+
+Suelto, sin pipeline:
+
+```bash
+python predict_match_v3.py "Spain" "Argentina" --neutral   # un partido puntual
+pytest                                                     # la suite de tests
 ```
 
 La GUI usa `winsound`/`pystray` y está pensada para **Windows**; el modelo y los
@@ -185,6 +191,7 @@ scripts de análisis corren en cualquier plataforma.
 
 | Archivo | Qué hace |
 |---|---|
+| `run.py` | el pipeline: `setup` / `update` / `analisis` (única definición del orden) |
 | `build_features.py` | descarga el dataset y construye la tabla de features |
 | `elo.py` | rating Elo dinámico + blend de lambdas |
 | `predict_match_v2.py` / `_v3.py` | modelo de fuerzas / blend con Elo (**producción**) |
