@@ -240,23 +240,24 @@ grupos a partir de quién juega contra quién.
 
 Los resultados se cargan a mano durante el torneo, porque el dataset público
 tarda días en publicarlos. Cuando finalmente llega, **gana el oficial** — y eso
-no es una preferencia: es lo que corrige los errores de tipeo. De las 101 cargas
-manuales de este repo, **2 difieren del oficial** (`England 3-2 Croatia` contra
-el 4-2 real), tipeadas apuradas el día del partido. La regla las arregla sola.
+no es una preferencia: la carga manual es **provisoria**. De las 101 de este
+repo, **2 difieren del oficial** (`England 3-2 Croatia` contra el 4-2 final)
+porque se cargaron con el partido *en curso*: iban 3-2 en ese momento. Que el
+oficial reemplace lo provisorio por lo final es justamente lo que se espera.
 
 Pero el botón "✏ editar resultado" de la app aparece *justo* cuando ya hay
 resultado, y con esa regla no hacía nada: escribía la fila y el oficial la
-ignoraba, sin avisar. Las dos intenciones son distintas y el código las
-distingue por **cuándo** se editó, sin preguntar nada:
+ignoraba, sin avisar. Son dos intenciones distintas, y el código las distingue
+por **cuándo** se editó, sin preguntar nada:
 
 | cuándo | qué significa | quién gana |
 |---|---|---|
-| se carga y todavía no hay oficial | estás completando | el oficial, cuando llegue |
+| se carga y todavía no hay oficial | estás anotando algo provisorio | el oficial, cuando llegue |
 | se edita y **ya hay** oficial | estás corrigiendo a propósito | vos |
 
 `set_result` lo deduce y lo guarda en la columna `corrige`. Y los overrides que
 quedan descartados por diferir del oficial ahora se avisan: que el oficial gane
-está bien, que nadie se entere de que hay una carga mal tipeada, no.
+está bien, que nadie se entere de que quedó una carga a medias, no.
 
 ### Vacío no es lo mismo que ilegible
 

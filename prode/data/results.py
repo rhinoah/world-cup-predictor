@@ -44,10 +44,11 @@ def apply_overrides(df: pd.DataFrame, results_csv, avisar=True) -> pd.DataFrame:
     Hay dos casos y no son el mismo:
 
     COMPLETAR (lo habitual). Se carga un partido a mano porque martj42 todavia
-    no lo publico. Cuando lo publique, gana el oficial. Eso NO es capricho: es lo
-    que corrige los errores de tipeo. Sobre las 101 cargas manuales de este repo,
-    2 difieren del oficial (`England 3-2 Croatia` contra el 4-2 real) -- typos al
-    cargar apurado, que esta regla arregla sola.
+    no lo publico. Cuando lo publique, gana el oficial. Eso NO es capricho: la
+    carga manual es PROVISORIA. Sobre las 101 de este repo, 2 difieren del
+    oficial (`England 3-2 Croatia` contra el 4-2 final) porque se cargaron con el
+    partido EN CURSO -- iban 3-2 en ese momento. El oficial reemplazando lo
+    provisorio por lo final es exactamente lo que tiene que pasar.
 
     CORREGIR (`corrige=True`). Se edito un partido que el dataset YA traia. Ahi
     la intencion es otra: alguien miro el marcador oficial, lo vio mal y lo
@@ -55,7 +56,8 @@ def apply_overrides(df: pd.DataFrame, results_csv, avisar=True) -> pd.DataFrame:
     no hacia nada: escribia la fila y el oficial la ignoraba, sin avisar.
 
     `avisar`: informa por stderr los overrides que quedaron descartados por
-    diferir del oficial. Son justamente los typos, que si no no se ven nunca.
+    diferir del oficial. Son las cargas que quedaron a medias, que si no no se
+    ven nunca.
     """
     man = csv_io.read(Path(results_csv).parent / MANUAL_NAME,
                       csv_io.MANUAL_RESULTS, missing_ok=True)
@@ -83,8 +85,8 @@ def apply_overrides(df: pd.DataFrame, results_csv, avisar=True) -> pd.DataFrame:
 def _avisar_descartados(df: pd.DataFrame, pisa: pd.Series) -> None:
     """Los overrides que difieren del oficial y NO estan marcados para pisar.
 
-    Se descartan (bien), pero en silencio no se enteraria nadie de que hay una
-    carga mal tipeada dando vueltas."""
+    Se descartan (bien), pero en silencio no se enteraria nadie de que quedo una
+    carga a medias dando vueltas."""
     distinto = (df["home_score"].notna() & df["home_score_m"].notna() & ~pisa
                 & ((df["home_score"] != df["home_score_m"])
                    | (df["away_score"] != df["away_score_m"])))

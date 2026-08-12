@@ -249,16 +249,60 @@ def test_set_result_sin_penales_limpia_los_penales_previos(project):
     assert app_data._pens_index() == {}
 
 
-def test_set_result_de_partido_desconocido_deja_la_fecha_vacia(project):
-    """Si el cruce no esta en results.csv, `_match_date` devuelve NA (no rompe)."""
+def test_set_result_de_un_cruce_que_no_existe_no_rompe(project):
+    """Ultimo recurso: si el cruce no esta en ninguna fuente, la fecha queda
+    vacia pero el marcador se guarda igual. No es un caso alcanzable desde la
+    app (todo partido sale del fixture), pero no puede tirar una excepcion."""
     project.results([{"home_team": "Spain", "away_team": "Argentina"}])
+    project.horarios([])
 
     app_data.set_result("Ghana", "Peru", 0, 0)
 
-    man = read_manual(project)
-    fila = man[man["home_team"] == "Ghana"].iloc[0]
+    fila = read_manual(project).pipe(lambda d: d[d["home_team"] == "Ghana"]).iloc[0]
     assert pd.isna(fila["date"]) or fila["date"] == ""
     assert (int(fila["home_score"]), int(fila["away_score"])) == (0, 0)
+
+
+def test_la_fecha_sale_del_fixture_cuando_el_dataset_todavia_no_tiene_el_partido(project):
+    """EL caso que rompia: se carga un resultado que martj42 todavia no publico
+    -- justo para lo que existe el override. Sin fecha, `apply_overrides` tiraba
+    la fila en el dropna y el resultado NO se aplicaba nunca, sin avisar."""
+    project.results([{"home_team": "Spain", "away_team": "Argentina"}])
+    project.horarios([{"home_team": "France", "away_team": "Brazil",
+                       "kickoff_arg": "2026-06-20 16:00"}])
+
+    app_data.set_result("France", "Brazil", 3, 1)
+
+    fila = read_manual(project).pipe(lambda d: d[d["home_team"] == "France"]).iloc[0]
+    assert fila["date"] == "2026-06-20"
+
+
+def test_volver_a_cargar_repara_una_fila_que_habia_quedado_sin_fecha(project):
+    """La otra mitad del bug: la rama de UPDATE no tocaba `date`, asi que una
+    fila rota se quedaba rota para siempre -- volver a cargarla no la arreglaba."""
+    project.results([{"home_team": "Spain", "away_team": "Argentina"}])
+    project.horarios([{"home_team": "France", "away_team": "Brazil",
+                       "kickoff_arg": "2026-06-20 16:00"}])
+    (project.base / "data" / "manual_results.csv").write_text(
+        "date,home_team,away_team,home_score,away_score,home_pens,away_pens\n"
+        ",France,Brazil,3,1,,\n", encoding="utf-8")
+
+    app_data.set_result("France", "Brazil", 3, 1)
+
+    fila = read_manual(project).pipe(lambda d: d[d["home_team"] == "France"]).iloc[0]
+    assert fila["date"] == "2026-06-20"
+
+
+def test_con_la_fecha_reparada_el_override_si_se_aplica(project):
+    """El punto de todo esto: que el resultado cargado llegue al dataset."""
+    project.results([{"home_team": "France", "away_team": "Brazil",
+                      "date": "2026-06-20", "home_score": None, "away_score": None}])
+    project.horarios([{"home_team": "France", "away_team": "Brazil",
+                       "kickoff_arg": "2026-06-20 16:00"}])
+
+    app_data.set_result("France", "Brazil", 3, 1)
+
+    assert _marcador(_override(project), "France") == (3, 1)
 
 
 # --------------------------------------------------------------------------
@@ -362,12 +406,14 @@ def test_apply_override_cruza_por_fecha_ademas_de_equipos(project):
 # y hasta ahora no hacia nada: escribia la fila y el oficial la ignoraba, sin
 # avisar. Pero hacer que el override gane siempre seria peor: sobre las 101
 # cargas manuales reales de este repo, 2 difieren del oficial porque se tipearon
-# apuradas antes de que martj42 publicara, y esta misma regla las corrige sola.
+# con el partido EN CURSO (iban 3-2 y termino 4-2): la carga manual es
+# provisoria, y esta misma regla la reemplaza por la final.
 # La distincion es CUANDO se edito, y `set_result` la deduce sin preguntar.
 
 def test_una_carga_previa_al_oficial_no_lo_pisa(project):
     """El caso real: se carga a mano el dia del partido, martj42 publica despues
-    y resulta que el marcador cargado tenia un typo. Gana el oficial."""
+    con el partido en curso, asi que el marcador cargado era parcial. Gana el
+    oficial, que es el final."""
     project.results([{"home_team": "England", "away_team": "Croatia",
                       "home_score": None, "away_score": None}])
     app_data.set_result("England", "Croatia", 3, 2)          # sin oficial todavia
@@ -417,7 +463,7 @@ def test_un_csv_sin_la_columna_corrige_no_pisa_nada(project):
 
 def test_los_overrides_descartados_se_avisan(project, capsys):
     """Que el oficial gane esta bien; que nadie se entere de que hay una carga
-    mal tipeada, no. Son los 2 typos reales del repo."""
+    a medias, no. Son las 2 cargas parciales reales del repo."""
     project.results([{"home_team": "England", "away_team": "Croatia",
                       "home_score": 4, "away_score": 2}])
     project.manual_results([{"home_team": "England", "away_team": "Croatia",

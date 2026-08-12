@@ -381,10 +381,32 @@ def _read_pron():
 
 
 def _match_date(home, away):
-    res = csv_io.read(BASE / "data" / "results.csv", csv_io.RESULTS)
+    """La fecha del cruce: del dataset, y si no esta ahi, del fixture o del bracket.
+
+    La fecha es parte de la CLAVE con la que `results.apply_overrides` cruza el
+    override contra el dataset. Sin ella la fila se cae en el `dropna` y el
+    resultado cargado a mano no se aplica nunca -- en silencio, y sin forma de
+    repararlo desde la app, porque volver a guardar tampoco la completaba.
+
+    Por eso no alcanza con results.csv: si el partido todavia no esta publicado
+    (justo el caso para el que existe el override) hay que sacarla de las otras
+    dos fuentes que si la tienen."""
+    res = csv_io.read(_results_csv(), csv_io.RESULTS, missing_ok=True)
     m = res[(res["home_team"] == home) & (res["away_team"] == away)
             & (res["tournament"] == TOURNAMENT) & (res["date"] >= pd.Timestamp(WC_START))]
-    return m.iloc[0]["date"] if len(m) else pd.NA
+    if len(m):
+        return m.iloc[0]["date"]
+
+    hor = csv_io.read(BASE / "fixture_horarios.csv", csv_io.HORARIOS, missing_ok=True)
+    h = hor[(hor["home_team"] == home) & (hor["away_team"] == away)]
+    if len(h) and pd.notna(h.iloc[0]["kickoff_arg"]):
+        return pd.Timestamp(h.iloc[0]["kickoff_arg"]).normalize()
+
+    # eliminacion: la fecha sale del cuadro, buscando el cruce por sus equipos
+    for m_ in knockout_fixture():
+        if (m_["home"], m_["away"]) == (home, away):
+            return pd.Timestamp(m_["kickoff"]).normalize()
+    return pd.NA
 
 
 def set_prediction(home, away, ph, pa):
@@ -456,6 +478,11 @@ def set_result(home, away, rh, ra, pens=None):
         man.loc[mask, "home_pens"] = ph
         man.loc[mask, "away_pens"] = pa
         man.loc[mask, "corrige"] = corrige
+        # Si la fila quedo sin fecha, completarla ahora. Antes esta rama no la
+        # tocaba, asi que una fila guardada sin fecha se quedaba rota para
+        # siempre: volver a cargar el resultado desde la app no la reparaba.
+        if man.loc[mask, "date"].isna().any():
+            man.loc[mask & man["date"].isna(), "date"] = _match_date(home, away)
     else:
         man = pd.concat([man, pd.DataFrame([{"date": _match_date(home, away), "home_team": home,
                                              "away_team": away, "home_score": int(rh), "away_score": int(ra),
