@@ -21,7 +21,37 @@ apuestas** — es un proyecto por diversión y aprendizaje.
 
 *Centro de comando de escritorio (CustomTkinter, tema oscuro):*
 
-<!-- TODO: capturas en docs/ — grilla principal, llaves, popup de carga -->
+![La pantalla principal](docs/app-principal.png)
+
+Tres columnas: el próximo partido con su cuenta regresiva y el puntaje de los dos
+prodes, los partidos de hoy y los de mañana. La franja `⏱ MODO DEMO` de arriba
+sale porque la captura está tomada con el reloj simulado (ver abajo) — el Mundial
+ya terminó.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/app-llaves.png" alt="Llaves de eliminación"></td>
+<td width="50%"><img src="docs/app-grupos.png" alt="Fase de grupos"></td>
+</tr>
+<tr>
+<td><b>Las llaves</b>, acá todavía en modo proyección: los 16avos salen de las
+posiciones de hoy y las rondas siguientes muestran <code>Gan. M74</code> hasta
+que se juegue. Los cruces de "1° vs mejor 3°" usan la tabla oficial de FIFA.</td>
+<td><b>La fase de grupos</b> con el desempate FIFA. Los partidos que todavía no
+se jugaron muestran la fecha en vez del marcador, aunque el dataset ya los tenga:
+es el mismo <code>as_of</code> que usa el modelo, aplicado a la pantalla.</td>
+</tr>
+<tr>
+<td><img src="docs/app-jornada.png" alt="Jornada anterior"></td>
+<td><img src="docs/app-cargar.png" alt="Cargar resultado"></td>
+</tr>
+<tr>
+<td><b>La jornada anterior</b>, para no perderse ninguno: el botón avisa con un
+⚠ cuántos quedaron sin cargar.</td>
+<td><b>Cargar un resultado</b>, con el toggle de penales que aparece sólo en
+eliminación (y el aviso ⚠ si un cruce quedó empatado sin tanda).</td>
+</tr>
+</table>
 
 > **Para verla andando**, el Mundial terminó, así que la app abre vacía. Hay un
 > modo demo que le hace creer que es otra fecha:
@@ -170,7 +200,7 @@ partido a partido y comparar con Brier o log-loss. Los datos del modelo están
 
 ## 🧪 Tests
 
-**395 tests** (1354 casos con la parametrización) sobre el modelo y la capa de
+**440 tests** (1528 casos con la parametrización) sobre el modelo y la capa de
 datos, corriendo en CI para Python 3.11 y 3.13:
 
 ```bash
@@ -296,8 +326,9 @@ scripts/                lo que se corre, no se importa (`python -m scripts.X`)
   predict_matchday.py   predice la jornada del día
   build_horarios.py     fixture en hora argentina
   build_flags.py        banderas · make_icon.py ícono · parse_thirds.py tabla FIFA
+  capturas.py           regenera las capturas del README (con el reloj simulado)
 
-tests/                  la suite pytest (395 tests, 1354 casos)
+tests/                  la suite pytest (440 tests, 1528 casos)
 run.py                  el pipeline: setup / update / analisis
 prode_app.py            atajo para abrir la app (16 líneas → prode.ui.app)
 *.bat                   lanzar la app · ciclo diario · instalar la automatización
@@ -333,8 +364,8 @@ Los CSV de datos y los pronósticos personales **no se versionan** (ver
 - De la auditoría interna post-torneo ya salieron la regla de puntaje unificada
   (`scoring.py`), el padrón único de selecciones (`teams.py`), el loader de CSV
   tipado (`csv_io.py`), la separación de la GUI en módulos y la suite de tests.
-  el repo reestructurado en paquetes y el pipeline en `run.py`. Queda sumar
-  capturas de la app.
+  el repo reestructurado en paquetes, el pipeline en `run.py` y las capturas.
+  El TODO quedó cerrado.
 - **Visión v2**: generalizar a un framework multi-deporte/multi-competencia —
   fuentes de datos intercambiables (con modo manual-first), formatos de torneo
   configurables (partido único / llaves / liga) y predictor pluggable por deporte.
