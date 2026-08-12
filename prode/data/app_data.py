@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-from prode import paths
+from prode import clock, paths
 from prode.tournament import bracket
 from prode.data import csv_io
 from prode.tournament import groups
@@ -95,7 +95,7 @@ def logical_date(dt):
 
 
 def logical_today(now=None):
-    return logical_date(now or datetime.now())
+    return logical_date(now or clock.now())
 
 
 MATCH_MINUTES = 120      # grupos: "terminado" 2 h despues del kickoff
@@ -135,7 +135,7 @@ def match_state(kickoff, now=None, home=None, away=None):
     Si el partido se marco terminado a mano, es 'done' aunque el reloj no llegue."""
     if home is not None and away is not None and (home, away) in _finished_set():
         return "done"
-    now = now or datetime.now()
+    now = now or clock.now()
     if now < kickoff:
         return "pre"
     dur = MATCH_MINUTES_KO if is_knockout(kickoff.date()) else MATCH_MINUTES
@@ -201,6 +201,18 @@ def _index_pronosticos(pron):
     return pred_idx, load_idx
 
 
+def _resultado_visible(real, kickoff):
+    """El resultado, salvo que el reloj simulado diga que todavia no se jugo.
+
+    El dataset ya trae los 104 partidos del Mundial, asi que sin esto el modo
+    demo mostraria el resultado de partidos que, para su fecha, no empezaron:
+    la columna de MANANA vendria con marcadores puestos. Fuera del modo demo
+    esta funcion no hace nada."""
+    if real is not None and clock.simulado() and kickoff > clock.now():
+        return None
+    return real
+
+
 def fixture():
     """Partidos de grupos (dicts) ordenados por hora, con resultado, pred y carga."""
     res, hor, pron = _load()
@@ -210,10 +222,12 @@ def fixture():
     out = []
     for _, h in hor.sort_values("kickoff_arg").iterrows():
         ht, at = h["home_team"], h["away_team"]
+        ko = h["kickoff_arg"].to_pydatetime()
         out.append({"home": ht, "away": at,
-                    "kickoff": h["kickoff_arg"].to_pydatetime(),
-                    "state": match_state(h["kickoff_arg"].to_pydatetime(), home=ht, away=at),
-                    "host": ht in HOSTS, "real": results.score_of(res_idx, ht, at),
+                    "kickoff": ko,
+                    "state": match_state(ko, home=ht, away=at),
+                    "host": ht in HOSTS,
+                    "real": _resultado_visible(results.score_of(res_idx, ht, at), ko),
                     "pred": pred_idx.get((ht, at)),
                     "load": load_idx.get((ht, at), (0, 0))})
     return out
@@ -263,14 +277,14 @@ def knockout_fixture():
             ht, at = winners.get(sa), winners.get(sb)
             al = ht or f"Gan. M{sa}"
             bl = at or f"Gan. M{sb}"
-        real = results.score_of(res_idx, ht, at)
-        pens = pens_idx.get((ht, at)) if ht and at else None
+        ko = pd.to_datetime(bracket.MATCH_DT[mnum]).to_pydatetime()
+        real = _resultado_visible(results.score_of(res_idx, ht, at), ko)
+        pens = pens_idx.get((ht, at)) if ht and at and real else None
         if real:
             if real[0] != real[1]:
                 winners[mnum], losers[mnum] = (ht, at) if real[0] > real[1] else (at, ht)
             elif pens:                              # empate en 120' -> avanza el de mas penales
                 winners[mnum], losers[mnum] = (ht, at) if pens[0] > pens[1] else (at, ht)
-        ko = pd.to_datetime(bracket.MATCH_DT[mnum]).to_pydatetime()
         out.append({"match": mnum, "home": ht, "away": at, "a_label": al, "b_label": bl,
                     "kickoff": ko, "state": match_state(ko, home=ht, away=at),
                     "host": False, "real": real, "pens": pens, "winner": winners.get(mnum),
@@ -281,7 +295,7 @@ def knockout_fixture():
 
 
 def next_match(now=None, fx=None):
-    now = now or datetime.now()
+    now = now or clock.now()
     fx = fixture() if fx is None else fx   # [] es una respuesta valida, no 'no me pasaron nada'
     upcoming = sorted((m for m in fx if m["kickoff"] > now), key=lambda m: m["kickoff"])
     return upcoming[0] if upcoming else None
@@ -322,7 +336,7 @@ def scoreboard(fx=None, now=None):
     total combinado; la UI decide si muestra las tablas separadas (primer prode)
     o la tabla continua (segundo)."""
     fx = fixture() if fx is None else fx   # [] es una respuesta valida, no 'no me pasaron nada'
-    now = now or datetime.now()
+    now = now or clock.now()
     board = {}
     for li, (name, (pe, pdir)) in enumerate(PRODES.items()):   # li: indice del prode en m["load"]
         st = {"grupos": {"total": 0, "n": 0, "exact": 0, "dir": 0, "fail": 0},

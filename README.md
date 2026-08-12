@@ -23,6 +23,20 @@ apuestas** — es un proyecto por diversión y aprendizaje.
 
 <!-- TODO: capturas en docs/ — grilla principal, llaves, popup de carga -->
 
+> **Para verla andando**, el Mundial terminó, así que la app abre vacía. Hay un
+> modo demo que le hace creer que es otra fecha:
+>
+> ```bash
+> PRODE_NOW=2026-06-25T18:00 python prode_app.py   # media fase de grupos
+> PRODE_NOW=2026-07-09T20:00 python prode_app.py   # semifinales
+> ```
+>
+> El reloj **corre** desde ahí (la cuenta regresiva baja de verdad) y la capa de
+> datos oculta los resultados de los partidos que, para esa fecha, todavía no se
+> jugaron — si no, la columna de MAÑANA vendría con los marcadores puestos. La
+> barra de arriba dice `⏱ MODO DEMO` para que una captura no se confunda con una
+> corrida real.
+
 - **Próximo partido** con cuenta regresiva, banderas y tu pronóstico cargado.
 - **Partidos de hoy / mañana** con el marcador sugerido por el modelo y su
   explicación: probabilidades 1X2, goles esperados, Elo y marcadores más probables.
@@ -214,6 +228,9 @@ pip install -r requirements.txt
 
 python run.py setup               # clon nuevo: dataset, fixture, banderas, ícono
 python prode_app.py               # la app de escritorio (Windows)
+
+# el Mundial terminó: para ver la app con un torneo en curso
+PRODE_NOW=2026-06-25T18:00 python prode_app.py
 ```
 
 El pipeline está en `run.py`, que es la única definición de en qué orden va cada
@@ -261,6 +278,7 @@ prode/                  el paquete: nada de acá se ejecuta solo, se importa
     csv_io.py           lectura/escritura tipada (los dtypes, en un solo lugar)
     results.py          resultados del torneo y búsqueda por cruce
     app_data.py         lo que consume la app: fixture, scoreboard, overrides
+  clock.py              el reloj, simulable con PRODE_NOW (modo demo)
   ui/                   la app de escritorio (CustomTkinter)
     app.py              la ventana principal
     bracket_window.py   las ventanas de grupos y de llaves

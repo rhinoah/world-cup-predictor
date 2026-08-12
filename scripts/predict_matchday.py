@@ -17,7 +17,7 @@ import argparse
 
 import pandas as pd
 
-from prode import paths
+from prode import clock, paths
 from prode.data import csv_io
 from prode.model.predict_match_v2 import fit_iterative, load_results, apply_manual_overrides
 from prode.model.elo import compute_elo
@@ -45,7 +45,7 @@ def main():
     if args.date:
         day = pd.Timestamp(args.date)
     else:
-        future = pending[pending["date"] >= pd.Timestamp.now().normalize()]
+        future = pending[pending["date"] >= pd.Timestamp(clock.now()).normalize()]
         if future.empty:
             print("No hay partidos pendientes en el fixture.")
             return

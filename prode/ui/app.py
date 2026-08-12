@@ -26,7 +26,7 @@ from datetime import datetime, timedelta
 
 import customtkinter as ctk
 
-from prode import paths
+from prode import clock, paths
 from prode.data import app_data
 from prode.tournament import bracket
 from prode.tournament.teams import es          # padron unico de las 48 selecciones
@@ -167,7 +167,7 @@ class App(BracketMixin, TrayMixin, ctk.CTk):
         return f
 
     def _can_change(self, kickoff):
-        return (kickoff - datetime.now()).total_seconds() > app_data.CHANGE_LIMIT_MIN * 60
+        return (kickoff - clock.now()).total_seconds() > app_data.CHANGE_LIMIT_MIN * 60
 
     def _fully_loaded(self, m):
         return bool(m["load"][0]) and bool(m["load"][1])   # cargado en AMBOS prodes (también en eliminación)
@@ -415,7 +415,7 @@ class App(BracketMixin, TrayMixin, ctk.CTk):
     # ---------------- data ----------------
     def refresh_data(self):
         try:
-            now = datetime.now()
+            now = clock.now()
             self.fx = app_data.fixture()
             self.ko = app_data.knockout_fixture()
             self.allm = self.fx + self.ko
@@ -681,8 +681,13 @@ class App(BracketMixin, TrayMixin, ctk.CTk):
 
     # ---------------- loop ----------------
     def tick(self):
-        now = datetime.now()
-        self.clock.configure(text=now.strftime("%A %d/%m · %H:%M:%S").capitalize())
+        now = clock.now()
+        reloj = now.strftime("%A %d/%m · %H:%M:%S").capitalize()
+        if clock.simulado():
+            # Que se note: una captura del modo demo no puede pasar por una real.
+            self.clock.configure(text=f"{reloj}   ·   ⏱ MODO DEMO", text_color=WARN)
+        else:
+            self.clock.configure(text=reloj)
         try:
             if time.time() - self._last_refresh > 300:   # auto-refresh cada 5 min (y solo recrea si cambió)
                 self.refresh_data()
