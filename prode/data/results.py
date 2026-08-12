@@ -20,6 +20,7 @@ eso solo funciona si el valor se lee en el momento de la llamada.
 """
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -37,12 +38,24 @@ def load(results_csv) -> pd.DataFrame:
     return apply_overrides(csv_io.read(results_csv, csv_io.RESULTS), results_csv)
 
 
-def apply_overrides(df: pd.DataFrame, results_csv) -> pd.DataFrame:
-    """Completa los marcadores que martj42 todavia no publico, desde
-    data/manual_results.csv (mismo esquema, al lado del dataset).
+def apply_overrides(df: pd.DataFrame, results_csv, avisar=True) -> pd.DataFrame:
+    """Aplica data/manual_results.csv sobre el dataset.
 
-    Solo rellena lo que esta vacio: nunca pisa un resultado oficial. Sirve para
-    cargar un partido ya jugado mientras el dataset publico tarda en actualizarse.
+    Hay dos casos y no son el mismo:
+
+    COMPLETAR (lo habitual). Se carga un partido a mano porque martj42 todavia
+    no lo publico. Cuando lo publique, gana el oficial. Eso NO es capricho: es lo
+    que corrige los errores de tipeo. Sobre las 101 cargas manuales de este repo,
+    2 difieren del oficial (`England 3-2 Croatia` contra el 4-2 real) -- typos al
+    cargar apurado, que esta regla arregla sola.
+
+    CORREGIR (`corrige=True`). Se edito un partido que el dataset YA traia. Ahi
+    la intencion es otra: alguien miro el marcador oficial, lo vio mal y lo
+    cambio a proposito. Ese pisa. Sin esto el boton "editar resultado" de la app
+    no hacia nada: escribia la fila y el oficial la ignoraba, sin avisar.
+
+    `avisar`: informa por stderr los overrides que quedaron descartados por
+    diferir del oficial. Son justamente los typos, que si no no se ven nunca.
     """
     man = csv_io.read(Path(results_csv).parent / MANUAL_NAME,
                       csv_io.MANUAL_RESULTS, missing_ok=True)
@@ -53,10 +66,37 @@ def apply_overrides(df: pd.DataFrame, results_csv) -> pd.DataFrame:
     # partido en el dataset: el Elo lo aplicaria dos veces y score_of elegiria
     # uno de los dos marcadores al azar. Gana el ultimo, que es el mas reciente.
     man = man.drop_duplicates(subset=_KEY, keep="last")
-    df = df.merge(man[_KEY + _SCORES], on=_KEY, how="left", suffixes=("", "_m"))
+    if "corrige" not in man.columns:
+        man = man.assign(corrige=pd.NA)
+    df = df.merge(man[_KEY + _SCORES + ["corrige"]], on=_KEY, how="left",
+                  suffixes=("", "_m"))
+
+    pisa = df["corrige"].fillna(False).astype(bool) & df["home_score_m"].notna()
+    if avisar:
+        _avisar_descartados(df, pisa)
     for c in _SCORES:
-        df[c] = df[c].where(df[c].notna(), df[f"{c}_m"])
-    return df.drop(columns=[f"{c}_m" for c in _SCORES])
+        # el override entra si el oficial esta vacio, o si viene marcado para pisar
+        df[c] = df[f"{c}_m"].where(pisa | df[c].isna() & df[f"{c}_m"].notna(), df[c])
+    return df.drop(columns=[f"{c}_m" for c in _SCORES] + ["corrige"])
+
+
+def _avisar_descartados(df: pd.DataFrame, pisa: pd.Series) -> None:
+    """Los overrides que difieren del oficial y NO estan marcados para pisar.
+
+    Se descartan (bien), pero en silencio no se enteraria nadie de que hay una
+    carga mal tipeada dando vueltas."""
+    distinto = (df["home_score"].notna() & df["home_score_m"].notna() & ~pisa
+                & ((df["home_score"] != df["home_score_m"])
+                   | (df["away_score"] != df["away_score_m"])))
+    if not distinto.any():
+        return
+    print(f"aviso: {int(distinto.sum())} resultado(s) cargados a mano difieren del "
+          "oficial y se descartan (el oficial manda salvo que se corrija a "
+          "proposito desde la app):", file=sys.stderr)
+    for _, r in df[distinto].head(5).iterrows():
+        print(f"  {r['home_team']} vs {r['away_team']}: oficial "
+              f"{r['home_score']}-{r['away_score']}, cargado "
+              f"{r['home_score_m']}-{r['away_score_m']}", file=sys.stderr)
 
 
 def by_teams(df: pd.DataFrame) -> pd.DataFrame:

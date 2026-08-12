@@ -313,7 +313,7 @@ def test_los_penales_se_guardan_sin_punto_cero(tmp_path):
     ida, _, _, _ = _ida_y_vuelta(tmp_path, pd.DataFrame(FILAS["MANUAL_RESULTS"]),
                                  MANUAL_RESULTS)
     texto = ida.read_text(encoding="utf-8")
-    assert "2026-07-04,France,Brazil,1,1,4,3\n" in texto
+    assert "2026-07-04,France,Brazil,1,1,4,3," in texto   # la ultima es `corrige`
     assert "4.0" not in texto and "3.0" not in texto
 
 
@@ -339,7 +339,7 @@ def test_un_csv_viejo_con_3_punto_0_se_cura_al_reescribirlo(tmp_path):
     assert man["home_pens"].tolist() == [4]
     assert str(man["home_pens"].dtype) == "Int64"
     assert p.read_text(encoding="utf-8").endswith(
-        "2026-07-04,France,Brazil,1,1,4,3\n")
+        "2026-07-04,France,Brazil,1,1,4,3,\n")     # la ultima columna es `corrige`
 
 
 # --------------------------------------------------------------------------
@@ -521,7 +521,7 @@ def test_las_columnas_que_faltan_se_agregan_al_final(tmp_path):
     man = csv_io.read(p, MANUAL_RESULTS)
 
     assert list(man)[:4] == ["home_team", "away_team", "home_score", "away_score"]
-    assert list(man)[4:] == ["date", "home_pens", "away_pens"]
+    assert list(man)[4:] == ["date", "home_pens", "away_pens", "corrige"]
 
 
 def test_una_columna_que_el_esquema_no_conoce_se_conserva_al_leer(tmp_path):

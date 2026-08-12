@@ -7,7 +7,8 @@ fuerza `pd.to_numeric(..., errors="coerce")` y usa `np.nan` -- nunca `""`.
 Bajo test:
   * `app_data._int_or0`  -- casteo defensivo de las columnas de carga.
   * `app_data.set_result` / `_pens_index` -- override manual de resultados y penales.
-  * `results.apply_overrides` -- completar el dataset sin pisar lo oficial.
+  * `results.apply_overrides` -- completar el dataset sin pisar lo oficial,
+    salvo que se este corrigiendo a proposito (`corrige`).
   * `app_data.set_prediction` / `set_confirmation` -- escritura de pronosticos.csv.
   * `liquidar.main` -- cruce por EQUIPOS (no por fecha) y re-liquidacion.
 
@@ -161,7 +162,7 @@ def test_set_result_agrega_columnas_de_penales_si_faltaban(project):
     app_data.set_result("France", "Brazil", 2, 1)
 
     man = read_manual(project)
-    assert list(man.columns)[-2:] == ["home_pens", "away_pens"]
+    assert list(man.columns)[-3:] == ["home_pens", "away_pens", "corrige"]
     assert pd.api.types.is_numeric_dtype(man["home_pens"])
 
 
@@ -275,7 +276,13 @@ def _results_df(project):
 def _override(project, res=None):
     """El override tal como lo aplican app_data y el modelo (misma funcion)."""
     return results.apply_overrides(
-        _results_df(project) if res is None else res, _results_csv(project))
+        _results_df(project) if res is None else res, _results_csv(project),
+        avisar=False)
+
+
+def _marcador(out, home):
+    r = out[out["home_team"] == home].iloc[0]
+    return int(r["home_score"]), int(r["away_score"])
 
 
 def test_apply_override_completa_faltantes_sin_pisar_oficiales(project):
@@ -346,6 +353,92 @@ def test_apply_override_cruza_por_fecha_ademas_de_equipos(project):
     out = _override(project)
 
     assert pd.isna(out.iloc[0]["home_score"])
+
+
+# --------------------------------------------------------------------------
+# (e2) `corrige`: completar no es lo mismo que corregir
+# --------------------------------------------------------------------------
+# El boton "✏ editar resultado" de la app aparece JUSTO cuando ya hay resultado,
+# y hasta ahora no hacia nada: escribia la fila y el oficial la ignoraba, sin
+# avisar. Pero hacer que el override gane siempre seria peor: sobre las 101
+# cargas manuales reales de este repo, 2 difieren del oficial porque se tipearon
+# apuradas antes de que martj42 publicara, y esta misma regla las corrige sola.
+# La distincion es CUANDO se edito, y `set_result` la deduce sin preguntar.
+
+def test_una_carga_previa_al_oficial_no_lo_pisa(project):
+    """El caso real: se carga a mano el dia del partido, martj42 publica despues
+    y resulta que el marcador cargado tenia un typo. Gana el oficial."""
+    project.results([{"home_team": "England", "away_team": "Croatia",
+                      "home_score": None, "away_score": None}])
+    app_data.set_result("England", "Croatia", 3, 2)          # sin oficial todavia
+    project.results([{"home_team": "England", "away_team": "Croatia",
+                      "home_score": 4, "away_score": 2}])    # llega el oficial
+
+    assert _marcador(_override(project), "England") == (4, 2)
+
+
+def test_editar_un_partido_que_YA_tenia_oficial_si_lo_pisa(project):
+    """La otra intencion: el oficial dice mal y se lo corrige a proposito desde
+    la app. Sin esto el boton escribia la fila para nada."""
+    project.results([{"home_team": "England", "away_team": "Croatia",
+                      "home_score": 4, "away_score": 2}])
+    app_data.set_result("England", "Croatia", 3, 2)          # editar, con oficial
+
+    assert _marcador(_override(project), "England") == (3, 2)
+
+
+def test_set_result_marca_corrige_solo_cuando_habia_oficial(project):
+    project.results([
+        {"home_team": "Spain", "away_team": "Argentina", "home_score": 1, "away_score": 0},
+        {"home_team": "France", "away_team": "Brazil", "date": "2026-06-16",
+         "home_score": None, "away_score": None},
+    ])
+    app_data.set_result("Spain", "Argentina", 2, 2)          # ya tenia -> corrige
+    app_data.set_result("France", "Brazil", 3, 1)            # no tenia  -> completa
+
+    man = csv_io.read(project.base / "data" / "manual_results.csv",
+                      csv_io.MANUAL_RESULTS)
+    por_equipo = {r["home_team"]: r["corrige"] for _, r in man.iterrows()}
+    assert por_equipo["Spain"] is True or por_equipo["Spain"] == True    # noqa: E712
+    assert not por_equipo["France"]
+
+
+def test_un_csv_sin_la_columna_corrige_no_pisa_nada(project):
+    """Compatibilidad: los manual_results.csv anteriores no tienen la columna, y
+    tienen que seguir comportandose como antes (el oficial manda)."""
+    project.results([{"home_team": "Spain", "away_team": "Argentina",
+                      "home_score": 1, "away_score": 0}])
+    (project.base / "data" / "manual_results.csv").write_text(
+        "date,home_team,away_team,home_score,away_score,home_pens,away_pens\n"
+        "2026-06-15,Spain,Argentina,9,9,,\n", encoding="utf-8")
+
+    assert _marcador(_override(project), "Spain") == (1, 0)
+
+
+def test_los_overrides_descartados_se_avisan(project, capsys):
+    """Que el oficial gane esta bien; que nadie se entere de que hay una carga
+    mal tipeada, no. Son los 2 typos reales del repo."""
+    project.results([{"home_team": "England", "away_team": "Croatia",
+                      "home_score": 4, "away_score": 2}])
+    project.manual_results([{"home_team": "England", "away_team": "Croatia",
+                             "home_score": 3, "away_score": 2}])
+
+    results.apply_overrides(_results_df(project), _results_csv(project))
+
+    err = capsys.readouterr().err
+    assert "England" in err and "4" in err and "3" in err
+
+
+def test_no_avisa_cuando_el_override_coincide_con_el_oficial(project, capsys):
+    """98 de las 101 cargas coinciden: si avisara por cada una, el aviso seria ruido."""
+    project.results([{"home_team": "Spain", "away_team": "Argentina",
+                      "home_score": 2, "away_score": 1}])
+    project.manual_results([{"home_team": "Spain", "away_team": "Argentina",
+                             "home_score": 2, "away_score": 1}])
+
+    results.apply_overrides(_results_df(project), _results_csv(project))
+
+    assert capsys.readouterr().err == ""
 
 
 # --------------------------------------------------------------------------

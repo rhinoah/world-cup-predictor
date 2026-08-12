@@ -427,25 +427,40 @@ def set_confirmation(home, away, gel=None, meli=None, pred=None):
     csv_io.write(pron, path, csv_io.PRONOSTICOS)
 
 
+def _ya_esta_en_el_dataset(home, away):
+    """Si el cruce YA tiene marcador oficial en results.csv."""
+    res = csv_io.read(_results_csv(), csv_io.RESULTS, missing_ok=True)
+    return results.score_of(results.by_teams(wc_matches(res)), home, away) is not None
+
+
 def set_result(home, away, rh, ra, pens=None):
     """Carga/edita el resultado final en data/manual_results.csv (override).
-    pens = (penales_local, penales_visita) si el partido se definio por penales
-    (eliminacion). El override solo completa lo que el dataset oficial no tiene."""
+
+    pens = (penales_local, penales_visita) si el partido se definio por penales.
+
+    Marca `corrige=True` cuando el partido YA tenia marcador oficial, porque ahi
+    editar significa otra cosa: no se esta completando lo que falta sino
+    corrigiendo lo que el dataset dice mal, y eso tiene que pisar. Antes no se
+    distinguia y el boton "editar resultado" de la app escribia la fila para
+    nada: el oficial la ignoraba y no avisaba. Ver `results.apply_overrides`."""
     mp = BASE / "data" / "manual_results.csv"
     # Las columnas de penales quedan enteras con faltantes (Int64) por esquema:
     # antes habia que re-castearlas a mano en cada guardado o se degradaban.
     man = csv_io.read(mp, csv_io.MANUAL_RESULTS, missing_ok=True)
     ph, pa = (int(pens[0]), int(pens[1])) if pens else (pd.NA, pd.NA)
+    corrige = _ya_esta_en_el_dataset(home, away)
     mask = (man["home_team"] == home) & (man["away_team"] == away)
     if mask.any():
         man.loc[mask, "home_score"] = int(rh)
         man.loc[mask, "away_score"] = int(ra)
         man.loc[mask, "home_pens"] = ph
         man.loc[mask, "away_pens"] = pa
+        man.loc[mask, "corrige"] = corrige
     else:
         man = pd.concat([man, pd.DataFrame([{"date": _match_date(home, away), "home_team": home,
                                              "away_team": away, "home_score": int(rh), "away_score": int(ra),
-                                             "home_pens": ph, "away_pens": pa}])], ignore_index=True)
+                                             "home_pens": ph, "away_pens": pa,
+                                             "corrige": corrige}])], ignore_index=True)
     csv_io.write(man, mp, csv_io.MANUAL_RESULTS)
 
 

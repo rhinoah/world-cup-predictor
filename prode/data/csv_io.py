@@ -109,6 +109,10 @@ MANUAL_RESULTS = {
     "away_score": INT + STRICT,      # mal escrito tiene que avisar, no evaporarse
     "home_pens": INT,                # casi siempre vacia: tolerante a proposito
     "away_pens": INT,
+    # "este marcador PISA al oficial". Lo pone `set_result` solo cuando se edita
+    # un partido que el dataset YA traia: si no hay oficial, completar es lo
+    # normal y no hay nada que pisar. Ver `results.apply_overrides`.
+    "corrige": BOOL,
 }
 
 # Los pronosticos del usuario (pronosticos.csv).
